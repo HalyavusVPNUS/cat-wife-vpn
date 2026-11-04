@@ -21,9 +21,16 @@ SOURCES = [
         "reject_russian_flag": True,
     },
     {
-        "name": "Gidroksi",
-        "url": "https://gidroksi.fun/free",
+        "name": "happcluchi",
+        "url": "https://freevpn.happcluchi.workers.dev",
         "reject_russian_flag": False,
+        # берём только конфиги, в названии которых есть один из маркеров
+        # (🇪🇺 Европа, 🇸🇪 Швеция, 🇳🇱 Нидерланды)
+        "allowed_countries": [
+            "🇪🇺", "europe", "европа",
+            "🇸🇪", "sweden", "швеция",
+            "🇳🇱", "netherlands", "нидерланды", "голландия",
+        ],
     },
 ]
 
@@ -518,6 +525,15 @@ def tcp_reachable(outbound):
 
 # ---------------------------------------------------------- selection
 
+def matches_country(uri, markers):
+    """Проверяет только название конфига (часть после #), не всю ссылку."""
+    fragment = urllib.parse.unquote(
+        html.unescape(urllib.parse.urlsplit(uri).fragment)
+    ).lower()
+
+    return any(marker.lower() in fragment for marker in markers)
+
+
 def get_working(source):
     candidates = fetch_source(source)
 
@@ -527,6 +543,18 @@ def get_working(source):
             for item in candidates
             if "🇷🇺" not in urllib.parse.unquote(html.unescape(item))
         ]
+
+    allowed = source.get("allowed_countries")
+
+    if allowed:
+        before = len(candidates)
+        candidates = [
+            item for item in candidates if matches_country(item, allowed)
+        ]
+        print(
+            f"{source['name']}: country filter kept "
+            f"{len(candidates)} of {before} links"
+        )
 
     jobs = []
     seen = set()
