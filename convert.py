@@ -14,7 +14,7 @@ from pathlib import Path
 SOURCES = [
     {
         "name": "OWPN",
-        "url": "https://owpn-key.duckdns.org/sub/6d55ba5cefd846d19b3b5f94d59a2f3b1eb2e02110da427b",
+        "url": "https://aeryxvpn-sub.aeryxvpn.workers.dev",
         "reject_russian_flag": True,
     },
     {
