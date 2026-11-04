@@ -52,11 +52,10 @@ MIN_TOTAL_TO_WRITE = 1         # минимум профилей, чтобы п�
 
 # --- JSON-режим для Happ -------------------------------------------------
 # Один JSON на источник, внутри все его конфиги + автовыбор лучшего по пингу.
+# Файл должен быть ЧИСТЫМ JSON (без #-заголовков), иначе Happ пишет "no server link".
 BALANCER_PROBE_URL = "https://www.gstatic.com/generate_204"
 BALANCER_PROBE_INTERVAL = "1m"
-# Если Happ не прочитает подписку с #-заголовками перед JSON,
-# поставь False (тогда название профиля задаётся в самой подписке в приложении).
-INCLUDE_HEADER = True
+PROFILE_TITLE = "Кошка жена ВПН 🐈"
 
 # Откуда считаем «близко»: где живёт аудитория подписки (по умолчанию Москва).
 # Пинг с раннера GitHub (США) для пользователей не показателен, поэтому
@@ -66,14 +65,6 @@ REFERENCE_LOCATION = (
     float(os.environ.get("REF_LON", "37.62")),
 )
 GEO_BUCKET_MS = 25   # конфиги в пределах 25 мс считаем равными, дальше решает замер
-
-HEADER = """#profile-title: Кошка жена ВПН 🐈
-#profile-update-interval: 1
-#subscription-userinfo: expire=86877705600; total=10995116277760; used=0
-#profile-web-page-url: https://t.me/halyava_vpnx
-#announce: 👲 Партия выдать тебе кошка жена + полный миска рис
-
-"""
 
 URI_RE = re.compile(r"""(?i)(?:vless|hysteria2|hy2)://[^\s<>"'`]+""")
 
@@ -524,7 +515,7 @@ def build_happ_json(source_name, uris):
         return None
 
     config = {
-        "remarks": f"🐈 Авто · {source_name} ({len(proxies)})",
+        "remarks": f"{PROFILE_TITLE} · Авто {source_name} ({len(proxies)})",
         "log": {"loglevel": "warning"},
         "dns": {"servers": ["1.1.1.1", "8.8.8.8"], "queryStrategy": "UseIP"},
         "inbounds": [
@@ -1180,9 +1171,9 @@ def main():
         print("No working configs found; keeping existing cat.txt")
         sys.exit(1)
 
+    # ВАЖНО: только чистый JSON, без #-заголовков, иначе Happ не распознает подписку
     body = json.dumps(profiles, ensure_ascii=False, indent=2)
-    content = (HEADER if INCLUDE_HEADER else "") + body + "\n"
-    OUTPUT_FILE.write_text(content, encoding="utf-8")
+    OUTPUT_FILE.write_text(body + "\n", encoding="utf-8")
 
     print(f"Done: wrote {len(profiles)} JSON profiles to {OUTPUT_FILE}")
 
