@@ -18,8 +18,8 @@ from pathlib import Path
 
 SOURCES = [
     {
-        "name": "vless-converter",
-        "url": "https://raw.githubusercontent.com/ReallySubHuman/vless-converter/refs/heads/main/vless.txt",
+        "name": "vlessforu",
+        "url": "https://sub.vlessfo.ru/vlessforu/working_configs.txt",
         "reject_russian_flag": True,
         "fill_unverified": True,
     },
@@ -41,7 +41,7 @@ SOURCES = [
 OUTPUT_FILE = Path("cat.txt")
 SING_BOX = os.environ.get("SING_BOX", "sing-box")
 
-PER_SOURCE_LIMIT = 5
+PER_SOURCE_LIMIT = 10          # конфигов в одном JSON
 MAX_CANDIDATES_TO_TEST_PER_SOURCE = 200   # тестируем почти всё, чтобы найти лучший пинг
 SOURCE_TIME_BUDGET = 780                  # сек на один источник (защита от долгого job)
 WORKERS = 4                    # параллельных проверок
@@ -52,7 +52,8 @@ MIN_TOTAL_TO_WRITE = 1         # минимум профилей, чтобы п�
 
 # --- JSON-режим для Happ -------------------------------------------------
 # Один JSON на источник, внутри все его конфиги + автовыбор лучшего по пингу.
-# Файл должен быть ЧИСТЫМ JSON (без #-заголовков), иначе Happ пишет "no server link".
+# cat.txt = ЧИСТЫЙ JSON (без #-заголовков, иначе Happ пишет "no server link").
+# announce, название, трафик и т.д. отдаются HTTP-заголовками через worker.js.
 BALANCER_PROBE_URL = "https://www.gstatic.com/generate_204"
 BALANCER_PROBE_INTERVAL = "1m"
 PROFILE_TITLE = "Кошка жена ВПН 🐈"
