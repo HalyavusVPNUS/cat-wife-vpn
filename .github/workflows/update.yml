@@ -11,6 +11,7 @@ permissions:
 jobs:
   update:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     steps:
       - name: Checkout repository
@@ -21,10 +22,33 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Update subscription
+      - name: Install sing-box
+        shell: bash
+        run: |
+          VERSION="1.14.4"
+          ARCHIVE="sing-box-${VERSION}-linux-amd64.tar.gz"
+
+          curl --fail --location --silent --show-error \
+            "https://github.com/SagerNet/sing-box/releases/download/v${VERSION}/${ARCHIVE}" \
+            --output "/tmp/${ARCHIVE}"
+
+          mkdir -p /tmp/sing-box-unpack
+
+          tar -xzf "/tmp/${ARCHIVE}" \
+            -C /tmp/sing-box-unpack
+
+          BIN="$(find /tmp/sing-box-unpack -type f -name sing-box -print -quit)"
+
+          test -n "$BIN"
+
+          sudo install "$BIN" /usr/local/bin/sing-box
+
+          sing-box version
+
+      - name: Test and build subscription
         run: python convert.py
 
-      - name: Save cat.txt
+      - name: Commit updated cat.txt
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -32,6 +56,8 @@ jobs:
           git add cat.txt
 
           if ! git diff --cached --quiet; then
-            git commit -m "Update Cat Wife VPN"
+            git commit -m "Update Cat Wife VPN subscription"
             git push
+          else
+            echo "cat.txt did not change"
           fi
