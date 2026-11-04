@@ -1,12 +1,18 @@
 import base64
-import socket
 import urllib.request
 from urllib.parse import urlsplit, unquote
 
-SOURCE_URL = "https://gidroksi.fun/free"
+SOURCE_URL = "https://freevpn.happcluchi.workers.dev"
 OUTPUT_FILE = "cat.txt"
+
 MAX_CONFIGS = 10
-TIMEOUT = 4
+
+ALLOWED_SCHEMES = {
+    "vless",
+    "hy2",
+    "hysteria2",
+    "hysteria"
+}
 
 HEADER = """#profile-title: Кошка жена ВПН 🐈
 #profile-update-interval: 1
@@ -23,48 +29,144 @@ def download_subscription():
         headers={"User-Agent": "Mozilla/5.0"}
     )
 
-    with urllib.request.urlopen(request, timeout=30) as response:
-        content = response.read().decode("utf-8").strip()
+    with urllib.request.urlopen(request, timeout=40) as response:
+        data = response.read().decode("utf-8-sig").strip()
 
-    try:
-        decoded = base64.b64decode(
-            content + "=" * (-len(content) % 4)
-        ).decode("utf-8")
+    # Источник обычно отдаёт обычный текст.
+    # Base64 оставлен как запасной вариант.
+    if "://" not in data:
+        try:
+            compact = "".join(data.split())
 
-        if "://" in decoded:
-            return decoded
-    except Exception:
-        pass
+            decoded = base64.b64decode(
+                compact + "=" * (-len(compact) % 4),
+                validate=True
+            ).decode("utf-8-sig")
 
-    return content
+            if "://" in decoded:
+                data = decoded
 
+        except Exception:
+            pass
 
-def get_server(config):
-    try:
-        parsed = urlsplit(config.strip())
-        return parsed.hostname, parsed.port
-    except Exception:
-        return None, None
-
-
-def is_russian(config):
-    return "🇷🇺" in unquote(config)
+    return data
 
 
-def is_available(config):
-    host, port = get_server(config)
+def get_configs(data):
+    vless = []
+    hysteria = []
 
-    if not host or not port:
-        return False
+    seen = set()
 
-    try:
-        with socket.create_connection(
-            (host, port),
-            timeout=TIMEOUT
-        ):
-            return True
-    except (OSError, ValueError):
-        return False
+    for line in data.splitlines():
+        line = line.strip()
+
+        if "://" not in line:
+            continue
+
+        scheme = line.split("://", 1)[0].lower()
+
+        # Оставляем только нужные протоколы
+        if scheme not in ALLOWED_SCHEMES:
+            continue
+
+        # Исключаем российские флаги
+        if "🇷🇺" in unquote(line):
+            continue
+
+        # Проверяем адрес и порт
+        try:
+            parsed = urlsplit(line)
+
+            if not parsed.hostname or not parsed.port:
+                continue
+
+            if parsed.hostname.lower() in (
+                "localhost",
+                "127.0.0.1"
+            ):
+                continue
+
+        except ValueError:
+            continue
+
+        # Убираем дубликаты
+        if line in seen:
+            continue
+
+        seen.add(line)
+
+        if scheme == "vless":
+            vless.append(line)
+        else:
+            hysteria.append(line)
+
+    return vless, hysteria
+
+
+def select_configs(vless, hysteria):
+    selected = []
+
+    # Стараемся распределить 10 конфигов
+    # между двумя протоколами поровну.
+    quota = MAX_CONFIGS // 2
+
+    for i in range(quota):
+        if i < len(vless):
+            selected.append(vless[i])
+
+        if i < len(hysteria):
+            selected.append(hysteria[i])
+
+    # Если одного протокола мало,
+    # добираем конфиги из другого.
+    if len(selected) < MAX_CONFIGS:
+        remaining = (
+            vless[quota:] +
+            hysteria[quota:]
+        )
+
+        selected.extend(
+            remaining[:MAX_CONFIGS - len(selected)]
+        )
+
+    return selected
+
+
+def save_subscription(configs):
+    if not configs:
+        raise RuntimeError(
+            "No VLESS or Hysteria configs found!"
+        )
+
+    with open(
+        OUTPUT_FILE,
+        "w",
+        encoding="utf-8"
+    ) as file:
+
+        file.write(HEADER)
+        file.write("\n".join(configs))
+        file.write("\n")
+
+    print(f"Saved {len(configs)} configs!")
+
+    print(
+        "VLESS:",
+        sum(c.startswith("vless://") for c in configs)
+    )
+
+    print(
+        "Hysteria:",
+        sum(
+            c.startswith((
+                "hy2://",
+                "hysteria2://",
+                "hysteria://"
+            ))
+            for c in configs
+        )
+    )
 
 
 def main():
@@ -72,50 +174,14 @@ def main():
 
     data = download_subscription()
 
-    configs = []
+    vless, hysteria = get_configs(data)
 
-    for line in data.splitlines():
-        line = line.strip()
+    print(f"Found VLESS: {len(vless)}")
+    print(f"Found Hysteria: {len(hysteria)}")
 
-        if not line.startswith("vless://"):
-            continue
+    configs = select_configs(vless, hysteria)
 
-        if is_russian(line):
-            print("Skipped Russian config")
-            continue
-
-        if line in configs:
-            continue
-
-        configs.append(line)
-
-    print(f"Found {len(configs)} VLESS configs")
-
-    working = []
-
-    for config in configs:
-        if len(working) >= MAX_CONFIGS:
-            break
-
-        print("Checking config...")
-
-        if is_available(config):
-            working.append(config)
-            print("Available!")
-        else:
-            print("Unavailable")
-
-    if not working:
-        raise RuntimeError(
-            "No available configs. Previous cat.txt preserved."
-        )
-
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as file:
-        file.write(HEADER)
-        file.write("\n".join(working))
-        file.write("\n")
-
-    print(f"Finished! Saved {len(working)} configs.")
+    save_subscription(configs)
 
 
 if __name__ == "__main__":
