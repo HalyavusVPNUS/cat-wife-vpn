@@ -20,6 +20,7 @@ SOURCES = [
         "name": "vless-converter",
         "url": "https://raw.githubusercontent.com/ReallySubHuman/vless-converter/refs/heads/main/vless.txt",
         "reject_russian_flag": True,
+        "fill_unverified": True,
     },
     {
         "name": "happcluchi",
@@ -45,7 +46,7 @@ SOURCE_TIME_BUDGET = 780                  # сек на один источни�
 WORKERS = 4                    # параллельных проверок
 SOCKS_STARTUP_TIMEOUT = 8
 PROBE_TIMEOUT = 10
-MIN_SUCCESSES = 2              # сколько из PROBE_URLS должно ответить
+MIN_SUCCESSES = 1              # достаточно одного ответа через прокси (туннель жив)
 MIN_TOTAL_TO_WRITE = 1         # минимум конфигов, чтобы перезаписать cat.txt
 
 HEADER = """#profile-title: Кошка жена ВПН 🐈
@@ -68,7 +69,14 @@ PROBE_URLS = [
     "https://www.gstatic.com/generate_204",
     "https://cp.cloudflare.com/generate_204",
     "https://www.google.com/generate_204",
+    "https://ya.ru",          # на случай серверов «белых списков»
 ]
+
+
+def ok_status(code):
+    """Любой нормальный HTTP-ответ через прокси = туннель работает."""
+    code = str(code).strip()
+    return code.isdigit() and 200 <= int(code) < 500
 
 _port_lock = threading.Lock()
 _used_ports = set()
@@ -427,7 +435,7 @@ def measure_latency(port, fallback_samples):
 
                 code, _, total = result.stdout.strip().partition("|")
 
-                if result.returncode == 0 and code.startswith("2"):
+                if result.returncode == 0 and ok_status(code):
                     samples.append(float(total))
 
             except (subprocess.TimeoutExpired, OSError, ValueError):
@@ -505,7 +513,7 @@ def probe_through_singbox(outbound):
                                     "--silent",
                                     "--show-error",
                                     "--location",
-                                    "--connect-timeout", "6",
+                                    "--connect-timeout", "10",
                                     "--max-time", str(PROBE_TIMEOUT),
                                     "--proxy", f"socks5h://127.0.0.1:{port}",
                                     "--output", "/dev/null",
@@ -519,7 +527,7 @@ def probe_through_singbox(outbound):
 
                             status = result.stdout.strip()
 
-                            if result.returncode == 0 and status.startswith("2"):
+                            if result.returncode == 0 and ok_status(status):
                                 successes += 1
                                 latencies.append(time.monotonic() - started)
                             else:
@@ -557,16 +565,6 @@ def probe_through_singbox(outbound):
             _used_ports.discard(port)
 
 
-def tcp_reachable(outbound):
-    try:
-        with socket.create_connection(
-            (outbound["server"], outbound["server_port"]), timeout=4
-        ):
-            return True
-    except OSError:
-        return False
-
-
 # ---------------------------------------------------------- selection
 
 def matches_country(uri, markers):
@@ -578,16 +576,46 @@ def matches_country(uri, markers):
     return any(marker.lower() in fragment for marker in markers)
 
 
-def tcp_open(host, port):
+def tcp_rtt(host, port):
+    """Время TCP-подключения к серверу в секундах (None = порт закрыт)."""
     if not host or not port:
-        return False
+        return None
     if host.startswith("127.") or host in {"localhost", "0.0.0.0"}:
-        return False
+        return None
+
+    started = time.monotonic()
+
     try:
         with socket.create_connection((host, port), timeout=5):
-            return True
+            return time.monotonic() - started
     except OSError:
-        return False
+        return None
+
+
+def tcp_open(host, port):
+    return tcp_rtt(host, port) is not None
+
+
+def dedupe_key(uri):
+    """Один и тот же сервер с разными fp= считаем одним конфигом."""
+    try:
+        parsed = urllib.parse.urlsplit(uri)
+        query = query_dict(parsed)
+        return (
+            parsed.scheme.lower(),
+            parsed.username,
+            (parsed.hostname or "").lower(),
+            parsed.port,
+            query.get("type", "tcp"),
+            query.get("security", ""),
+            query.get("sni", ""),
+            query.get("pbk", ""),
+            query.get("path", ""),
+            query.get("serviceName", ""),
+            query.get("flow", ""),
+        )
+    except ValueError:
+        return uri
 
 
 def uri_endpoint(uri):
@@ -624,9 +652,14 @@ def get_working(source):
     seen = set()
 
     for uri in candidates:
-        if uri in seen:
+        key = dedupe_key(uri)
+        if key in seen:
             continue
-        seen.add(uri)
+        seen.add(key)
+
+        host, _ = uri_endpoint(uri)
+        if not host or host.startswith("127.") or host in {"0.0.0.0", "localhost"}:
+            continue   # заглушки
 
         outbound = make_singbox_outbound(uri)
 
@@ -650,6 +683,8 @@ def get_working(source):
 
     passed = []
     failed = []
+    closed = set()
+    reasons = {}
     deadline = time.monotonic() + SOURCE_TIME_BUDGET
 
     # случайный порядок, чтобы лимит по времени не резал одни и те же конфиги
@@ -693,7 +728,17 @@ def get_working(source):
                 print(f"{source['name']} #{index}: FAIL - {reason}")
                 failed.append((index, uri))
 
+                if reason == "tcp port closed":
+                    closed.add(index)
+
+                kind = reason.split(":")[0][:30]
+                reasons[kind] = reasons.get(kind, 0) + 1
+
     passed.sort(key=lambda item: item[0])
+
+    if reasons:
+        summary = ", ".join(f"{k}: {v}" for k, v in sorted(reasons.items()))
+        print(f"{source['name']}: failure reasons -> {summary}")
 
     print(f"{source['name']}: {len(passed)} passed, best pings:")
     for latency, uri in passed[:PER_SOURCE_LIMIT + 3]:
@@ -703,26 +748,35 @@ def get_working(source):
     selected = [uri for _, uri in passed[:PER_SOURCE_LIMIT]]
     verified = len(selected)
 
-    # добираем непроверенными (порт сервера открыт), если проверенных мало
+    # добираем непроверенными, если проверенных мало: берём серверы с
+    # открытым портом, самые быстрые по TCP-отклику идут первыми
     if source.get("fill_unverified") and len(selected) < PER_SOURCE_LIMIT:
-        pool_unverified = sorted(
-            failed + [(index, uri) for index, uri, _ in untestable]
-        )
+        pool_unverified = [
+            (index, uri) for index, uri in failed if index not in closed
+        ] + [(index, uri) for index, uri, _ in untestable]
 
-        for index, uri in pool_unverified:
+        def rtt_of(item):
+            host, port = uri_endpoint(item[1])
+            return item, tcp_rtt(host, port)
+
+        ranked = []
+
+        with ThreadPoolExecutor(max_workers=8) as rtt_pool:
+            for item, rtt in rtt_pool.map(rtt_of, pool_unverified):
+                if rtt is not None:
+                    ranked.append((rtt, item))
+
+        ranked.sort(key=lambda entry: entry[0])
+
+        for rtt, (index, uri) in ranked:
             if len(selected) >= PER_SOURCE_LIMIT:
                 break
 
-            host, port = uri_endpoint(uri)
-
-            if tcp_open(host, port):
-                print(
-                    f"{source['name']} #{index}: UNVERIFIED "
-                    f"(port open, added as filler)"
-                )
-                selected.append(uri)
-            else:
-                print(f"{source['name']} #{index}: port closed, skipped")
+            print(
+                f"{source['name']} #{index}: UNVERIFIED "
+                f"(tcp {rtt * 1000:.0f} ms, added as filler)"
+            )
+            selected.append(uri)
 
     if len(selected) < PER_SOURCE_LIMIT:
         print(
