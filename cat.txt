@@ -4,13 +4,10 @@
 #profile-web-page-url: https://t.me/halyava_vpnx
 #announce: 👲 Партия выдать тебе кошка жена + полный миска рис
 
-vless://c720cb74-4c84-4fce-b8ae-637dbaa16199@217.19.122.156:443?encryption=none&security=tls&type=ws&sni=z1q3pv4g78.rucdncomp.pro&fp=firefox&path=%2Fuseraction%2Fevents%2Fb892639b7195%2F&host=z1q3pv4g78.rucdncomp.pro#proxy
-vless://c720cb74-4c84-4fce-b8ae-637dbaa16199@91.185.83.44:443?encryption=none&security=tls&type=ws&sni=nguyxejonb.rucdncomp.pro&fp=firefox&path=%2Fservice%2Ftelemetry%2F0294da469190%2F&host=nguyxejonb.rucdncomp.pro#proxy
 vless://7955bf18-35c4-412d-aabd-c0b36c793063@91.185.83.44:443?encryption=none&security=tls&type=ws&sni=nguyxejonb.rucdncomp.pro&fp=firefox&path=%2Fservice%2Ftelemetry%2F0294da469190%2F&host=nguyxejonb.rucdncomp.pro#proxy
-vless://c720cb74-4c84-4fce-b8ae-637dbaa16199@217.19.122.156:443?encryption=none&security=tls&type=ws&sni=z1q3pv4g78.rucdncomp.pro&fp=ios&path=%2Fuseraction%2Fevents%2Fb892639b7195%2F&host=z1q3pv4g78.rucdncomp.pro#proxy
+vless://c720cb74-4c84-4fce-b8ae-637dbaa16199@91.185.83.44:443?encryption=none&security=tls&type=ws&sni=nguyxejonb.rucdncomp.pro&fp=firefox&path=%2Fservice%2Ftelemetry%2F0294da469190%2F&host=nguyxejonb.rucdncomp.pro#proxy
 vless://c720cb74-4c84-4fce-b8ae-637dbaa16199@217.19.122.156:443?encryption=none&security=tls&type=ws&sni=z1q3pv4g78.rucdncomp.pro&fp=random&path=%2Fuseraction%2Fevents%2Fb892639b7195%2F&host=z1q3pv4g78.rucdncomp.pro#proxy
-hysteria2://gf1%3Agfhysteria2024@185.156.44.99:443?sni=css.rbxcdn.com&insecure=1&allowInsecure=1#%F0%9F%87%B7%F0%9F%87%B4%20GidroksiFree%20%231%20%7C%20%F0%9F%94%B4WIFI%20%7C%20962ms%20%7C%20%E2%86%930.0Mbps
-hysteria2://a35c508f-4d5d-4531-842e-6e9d43c762c0@13.143.189.80:4444?sni=pl3.nexfile.net#%F0%9F%87%B5%F0%9F%87%B1%20GidroksiFree%20%237%20%7C%20%F0%9F%94%B4WIFI%20%7C%20275ms%20%7C%20%E2%86%930.0Mbps
-hysteria2://eBTe6Ax2pUts8oMEWoYVDfnSlHfkLffQ@152.32.254.68:5010?obfs=salamander&obfs-password=7M4RXPFcQyQEGbkxBPfXo4bilMhCW2U9&sni=nas.aizhzo.com#%F0%9F%87%AD%F0%9F%87%B0%20GidroksiFree%20%234%20%7C%20%F0%9F%94%B4WIFI%20%7C%201513ms%20%7C%20%E2%86%930.0Mbps
-hysteria2://gf1%3Agfhysteria2024@5.129.235.85:443?insecure=1&sni=5.129.235.85#%F0%9F%87%B3%F0%9F%87%B1%20GidroksiFree%20%2313%20%7C%20%F0%9F%94%B4WIFI%20%7C%20476ms%20%7C%20%E2%86%930.0Mbps
-hysteria2://a35c508f-4d5d-4531-842e-6e9d43c762c0@13.143.189.101:4444?sni=pl1.nexfile.net#%F0%9F%87%B5%F0%9F%87%B1%20GidroksiFree%20%238%20%7C%20%F0%9F%94%B4WIFI%20%7C%20762ms%20%7C%20%E2%86%930.0Mbps
+vless://c720cb74-4c84-4fce-b8ae-637dbaa16199@217.19.122.156:443?encryption=none&security=tls&type=ws&sni=z1q3pv4g78.rucdncomp.pro&fp=firefox&path=%2Fuseraction%2Fevents%2Fb892639b7195%2F&host=z1q3pv4g78.rucdncomp.pro#proxy
+vless://c720cb74-4c84-4fce-b8ae-637dbaa16199@217.19.122.156:443?encryption=none&security=tls&type=ws&sni=z1q3pv4g78.rucdncomp.pro&fp=ios&path=%2Fuseraction%2Fevents%2Fb892639b7195%2F&host=z1q3pv4g78.rucdncomp.pro#proxy
+vless://71b566cb-78c4-48e4-af5b-720e4f7884f2@vdsin.xvanta.online:443?security=reality&encryption=none&pbk=xEDYfxVdiRkY-z7qiUvoly7fYDz4U6wI5p69oNbjWA4&headerType=&fp=firefox&type=tcp&flow=xtls-rprx-vision&sni=vdsin.xvanta.online&sid=f9d991431c87703c#%F0%9F%87%B3%F0%9F%87%B1%20%20happcluchi%20vpn%20%2363
+vless://5c32201a-6c0e-451b-8f0a-24b4bd40df59@185.153.55.23:443?type=tcp&security=reality&flow=xtls-rprx-vision&fp=firefox&pbk=kBTMVLCNE0jjwuJF6H5-65l5Pe0QToS0Hg-9Tmaa7Sk&sid=1a2b3c4d&sni=assets-v2.porsche.com#%F0%9F%87%B8%F0%9F%87%AA%20%20happcluchi%20vpn%20%2345
