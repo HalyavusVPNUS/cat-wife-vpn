@@ -2,6 +2,7 @@ import base64
 import html
 import json
 import os
+import random
 import re
 import socket
 import subprocess
@@ -39,7 +40,8 @@ OUTPUT_FILE = Path("cat.txt")
 SING_BOX = os.environ.get("SING_BOX", "sing-box")
 
 PER_SOURCE_LIMIT = 5
-MAX_CANDIDATES_TO_TEST_PER_SOURCE = 60
+MAX_CANDIDATES_TO_TEST_PER_SOURCE = 200   # тестируем почти всё, чтобы найти лучший пинг
+SOURCE_TIME_BUDGET = 780                  # сек на один источник (защита от долгого job)
 WORKERS = 4                    # параллельных проверок
 SOCKS_STARTUP_TIMEOUT = 8
 PROBE_TIMEOUT = 10
@@ -393,6 +395,51 @@ def tail(text, limit=200):
     return text[-limit:]
 
 
+LATENCY_URLS = [
+    "http://cp.cloudflare.com/generate_204",
+    "http://www.gstatic.com/generate_204",
+]
+LATENCY_ROUNDS = 3
+
+
+def measure_latency(port, fallback_samples):
+    """Честный пинг: обычный HTTP без TLS, несколько замеров, медиана."""
+    samples = []
+
+    for _ in range(LATENCY_ROUNDS):
+        for url in LATENCY_URLS:
+            try:
+                result = subprocess.run(
+                    [
+                        "curl",
+                        "--silent",
+                        "--connect-timeout", "5",
+                        "--max-time", "8",
+                        "--proxy", f"socks5h://127.0.0.1:{port}",
+                        "--output", "/dev/null",
+                        "--write-out", "%{http_code}|%{time_total}",
+                        url,
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=11,
+                )
+
+                code, _, total = result.stdout.strip().partition("|")
+
+                if result.returncode == 0 and code.startswith("2"):
+                    samples.append(float(total))
+
+            except (subprocess.TimeoutExpired, OSError, ValueError):
+                pass
+
+    if len(samples) >= 2:
+        samples.sort()
+        return samples[len(samples) // 2]
+
+    return min(fallback_samples)
+
+
 def probe_through_singbox(outbound):
     """Возвращает (latency | None, причина)."""
     port = free_local_port()
@@ -488,7 +535,7 @@ def probe_through_singbox(outbound):
                             break
 
                     if successes >= MIN_SUCCESSES:
-                        return sum(latencies) / len(latencies), "ok"
+                        return measure_latency(port, latencies), "ok"
 
                     log = log_path.read_text(errors="replace")
                     return None, f"{last_error} | sing-box: {tail(log, 120)}"
@@ -603,12 +650,20 @@ def get_working(source):
 
     passed = []
     failed = []
-    enough = threading.Event()
-    stop_after = PER_SOURCE_LIMIT * 2
+    deadline = time.monotonic() + SOURCE_TIME_BUDGET
+
+    # случайный порядок, чтобы лимит по времени не резал одни и те же конфиги
+    random.shuffle(testable)
 
     def work(index, uri, outbound):
-        if enough.is_set():
+        if time.monotonic() > deadline:
             return index, uri, None, "skipped"
+
+        # быстрый отсев: если TCP-порт сервера закрыт, sing-box запускать не надо
+        if outbound["type"] == "vless" and not tcp_open(
+            outbound["server"], outbound["server_port"]
+        ):
+            return index, uri, None, "tcp port closed"
 
         latency, reason = probe_through_singbox(outbound)
 
@@ -634,13 +689,17 @@ def get_working(source):
             if latency is not None:
                 print(f"{source['name']} #{index}: PASS ({latency:.2f}s)")
                 passed.append((latency, uri))
-                if len(passed) >= stop_after:
-                    enough.set()
             else:
                 print(f"{source['name']} #{index}: FAIL - {reason}")
                 failed.append((index, uri))
 
     passed.sort(key=lambda item: item[0])
+
+    print(f"{source['name']}: {len(passed)} passed, best pings:")
+    for latency, uri in passed[:PER_SOURCE_LIMIT + 3]:
+        host, _ = uri_endpoint(uri)
+        print(f"    {latency:.2f}s  {host}")
+
     selected = [uri for _, uri in passed[:PER_SOURCE_LIMIT]]
     verified = len(selected)
 
