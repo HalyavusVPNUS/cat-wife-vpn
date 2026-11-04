@@ -13,7 +13,7 @@ from pathlib import Path
 
 SOURCES = [
     {
-        "name": "OWPN",
+        "name": "AeryxVPN",
         "url": "https://aeryxvpn-sub.aeryxvpn.workers.dev",
         "reject_russian_flag": True,
     },
