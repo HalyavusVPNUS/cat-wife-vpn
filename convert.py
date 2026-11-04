@@ -36,6 +36,12 @@ SOURCES = [
             "🇳🇱", "netherlands", "нидерланды", "голландия",
         ],
     },
+    {
+        "name": "gidroksi",
+        "url": "https://gidroksi.fun/free",
+        "reject_russian_flag": False,
+        "fill_unverified": True,
+    },
 ]
 
 OUTPUT_FILE = Path("cat.txt")
@@ -53,7 +59,7 @@ MIN_TOTAL_TO_WRITE = 1         # минимум профилей, чтобы п�
 # --- JSON-режим для Happ -------------------------------------------------
 # Один JSON на источник, внутри все его конфиги + автовыбор лучшего по пингу.
 # cat.txt = ЧИСТЫЙ JSON (без #-заголовков, иначе Happ пишет "no server link").
-# announce, название, трафик и т.д. отдаются HTTP-заголовками через worker.js.
+# Название профиля отдаётся HTTP-заголовком через worker.js.
 BALANCER_PROBE_URL = "https://www.gstatic.com/generate_204"
 BALANCER_PROBE_INTERVAL = "1m"
 PROFILE_TITLE = "Кошка жена ВПН 🐈"
