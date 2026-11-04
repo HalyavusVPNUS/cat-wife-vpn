@@ -48,7 +48,15 @@ WORKERS = 4                    # параллельных проверок
 SOCKS_STARTUP_TIMEOUT = 8
 PROBE_TIMEOUT = 10
 MIN_SUCCESSES = 1              # достаточно одного ответа через прокси (туннель жив)
-MIN_TOTAL_TO_WRITE = 1         # минимум конфигов, чтобы перезаписать cat.txt
+MIN_TOTAL_TO_WRITE = 1         # минимум профилей, чтобы перезаписать cat.txt
+
+# --- JSON-режим для Happ -------------------------------------------------
+# Один JSON на источник, внутри все его конфиги + автовыбор лучшего по пингу.
+BALANCER_PROBE_URL = "https://www.gstatic.com/generate_204"
+BALANCER_PROBE_INTERVAL = "1m"
+# Если Happ не прочитает подписку с #-заголовками перед JSON,
+# поставь False (тогда название профиля задаётся в самой подписке в приложении).
+INCLUDE_HEADER = True
 
 # Откуда считаем «близко»: где живёт аудитория подписки (по умолчанию Москва).
 # Пинг с раннера GitHub (США) для пользователей не показателен, поэтому
@@ -349,6 +357,231 @@ def make_singbox_outbound(uri):
         return outbound
 
     return None
+
+
+# ------------------------------------------------------- uri -> xray json
+
+def make_xray_outbound(uri, tag):
+    """vless:// -> outbound в формате xray (его понимает Happ).
+    Hysteria2 в xray-JSON не переносим: возвращаем None."""
+    parsed = urllib.parse.urlsplit(uri)
+
+    if parsed.scheme.lower() != "vless":
+        return None
+
+    query = query_dict(parsed)
+
+    try:
+        server = parsed.hostname
+        port = parsed.port
+    except ValueError:
+        return None
+
+    user_id = urllib.parse.unquote(parsed.username or "")
+
+    if not server or not port or not user_id:
+        return None
+
+    user = {
+        "id": user_id,
+        "encryption": query.get("encryption") or "none",
+    }
+
+    flow = query.get("flow")
+    if flow:
+        user["flow"] = flow
+
+    network = (query.get("type") or "tcp").lower()
+    if network in {"raw", ""}:
+        network = "tcp"
+
+    stream = {"network": network}
+
+    path = urllib.parse.unquote(query.get("path", ""))
+    host_header = query.get("host", "")
+
+    if network == "ws":
+        ws = {}
+        if path:
+            ws["path"] = path
+        if host_header:
+            ws["headers"] = {"Host": host_header}
+        stream["wsSettings"] = ws
+
+    elif network == "httpupgrade":
+        hu = {}
+        if path:
+            hu["path"] = path
+        if host_header:
+            hu["host"] = host_header
+        stream["httpupgradeSettings"] = hu
+
+    elif network == "grpc":
+        grpc = {}
+        service_name = query.get("serviceName") or query.get("service_name")
+        if service_name:
+            grpc["serviceName"] = service_name
+        if truthy(query.get("multiMode", "")) or query.get("mode") == "multi":
+            grpc["multiMode"] = True
+        stream["grpcSettings"] = grpc
+
+    elif network in {"xhttp", "splithttp"}:
+        stream["network"] = "xhttp"
+        xh = {}
+        if path:
+            xh["path"] = path
+        if host_header:
+            xh["host"] = host_header
+        if query.get("mode"):
+            xh["mode"] = query["mode"]
+        extra = query.get("extra")
+        if extra:
+            try:
+                xh["extra"] = json.loads(urllib.parse.unquote(extra))
+            except ValueError:
+                pass
+        stream["xhttpSettings"] = xh
+
+    elif network == "tcp":
+        if (query.get("headerType") or "").lower() == "http":
+            request = {"path": [path or "/"]}
+            if host_header:
+                request["headers"] = {"Host": host_header.split(",")}
+            stream["tcpSettings"] = {
+                "header": {"type": "http", "request": request}
+            }
+
+    else:
+        return None
+
+    security = (query.get("security") or "none").lower()
+    fingerprint = query.get("fp") or query.get("fingerprint")
+    sni = query.get("sni") or query.get("serverName") or server
+
+    if security == "tls":
+        tls = {"serverName": sni}
+
+        if truthy(query.get("allowInsecure", "")) or truthy(
+            query.get("insecure", "")
+        ):
+            tls["allowInsecure"] = True
+
+        alpn = query.get("alpn")
+        if alpn:
+            tls["alpn"] = [
+                v for v in urllib.parse.unquote(alpn).split(",") if v
+            ]
+
+        if fingerprint:
+            tls["fingerprint"] = fingerprint
+
+        stream["security"] = "tls"
+        stream["tlsSettings"] = tls
+
+    elif security == "reality":
+        public_key = query.get("pbk") or query.get("publicKey")
+
+        if not public_key:
+            return None
+
+        reality = {
+            "serverName": sni,
+            "fingerprint": fingerprint or "chrome",
+            "publicKey": public_key,
+            "shortId": query.get("sid") or query.get("shortId") or "",
+            "spiderX": urllib.parse.unquote(query.get("spx", "")),
+        }
+
+        stream["security"] = "reality"
+        stream["realitySettings"] = reality
+
+    elif security in {"none", ""}:
+        stream["security"] = "none"
+
+    else:
+        return None
+
+    return {
+        "tag": tag,
+        "protocol": "vless",
+        "settings": {
+            "vnext": [{"address": server, "port": port, "users": [user]}]
+        },
+        "streamSettings": stream,
+    }
+
+
+def build_happ_json(source_name, uris):
+    """Один xray-JSON на источник: все конфиги + автовыбор по пингу."""
+    proxies = []
+
+    for uri in uris:
+        outbound = make_xray_outbound(uri, f"proxy-{len(proxies) + 1}")
+        if outbound is not None:
+            proxies.append(outbound)
+
+    if not proxies:
+        return None
+
+    config = {
+        "remarks": f"🐈 Авто · {source_name} ({len(proxies)})",
+        "log": {"loglevel": "warning"},
+        "dns": {"servers": ["1.1.1.1", "8.8.8.8"], "queryStrategy": "UseIP"},
+        "inbounds": [
+            {
+                "tag": "socks",
+                "port": 10808,
+                "listen": "127.0.0.1",
+                "protocol": "socks",
+                "settings": {"auth": "noauth", "udp": True},
+                "sniffing": {
+                    "enabled": True,
+                    "destOverride": ["http", "tls", "quic"],
+                },
+            },
+            {
+                "tag": "http",
+                "port": 10809,
+                "listen": "127.0.0.1",
+                "protocol": "http",
+                "sniffing": {
+                    "enabled": True,
+                    "destOverride": ["http", "tls", "quic"],
+                },
+            },
+        ],
+        "outbounds": proxies
+        + [
+            {"tag": "direct", "protocol": "freedom"},
+            {"tag": "block", "protocol": "blackhole"},
+        ],
+        "observatory": {
+            "subjectSelector": ["proxy-"],
+            "probeUrl": BALANCER_PROBE_URL,
+            "probeInterval": BALANCER_PROBE_INTERVAL,
+            "enableConcurrency": True,
+        },
+        "routing": {
+            "domainStrategy": "IPIfNonMatch",
+            "balancers": [
+                {
+                    "tag": "auto",
+                    "selector": ["proxy-"],
+                    "strategy": {"type": "leastPing"},
+                    "fallbackTag": "proxy-1",
+                }
+            ],
+            "rules": [
+                {
+                    "type": "field",
+                    "network": "tcp,udp",
+                    "balancerTag": "auto",
+                }
+            ],
+        },
+    }
+
+    return config
 
 
 # ------------------------------------------------------------- probing
@@ -918,22 +1151,40 @@ def print_environment():
 def main():
     print_environment()
 
-    all_configs = []
+    profiles = []   # по одному xray-JSON на источник
 
     for source in SOURCES:
         try:
-            all_configs.extend(get_working(source))
+            uris = get_working(source)
         except Exception as exc:
             print(f"ERROR in source {source['name']}: {exc}")
+            continue
 
-    if len(all_configs) < MIN_TOTAL_TO_WRITE:
+        profile = build_happ_json(source["name"], uris)
+
+        if profile is None:
+            print(
+                f"{source['name']}: no configs convertible to xray JSON, skipping"
+            )
+            continue
+
+        count = len(profile["outbounds"]) - 2   # минус direct и block
+        skipped = len(uris) - count
+        print(
+            f"{source['name']}: JSON profile with {count} configs "
+            f"({skipped} skipped: not vless / unsupported)"
+        )
+        profiles.append(profile)
+
+    if len(profiles) < MIN_TOTAL_TO_WRITE:
         print("No working configs found; keeping existing cat.txt")
         sys.exit(1)
 
-    content = HEADER + "\n".join(all_configs) + "\n"
+    body = json.dumps(profiles, ensure_ascii=False, indent=2)
+    content = (HEADER if INCLUDE_HEADER else "") + body + "\n"
     OUTPUT_FILE.write_text(content, encoding="utf-8")
 
-    print(f"Done: wrote {len(all_configs)} configs to {OUTPUT_FILE}")
+    print(f"Done: wrote {len(profiles)} JSON profiles to {OUTPUT_FILE}")
 
 
 if __name__ == "__main__":
