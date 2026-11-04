@@ -1,4 +1,3 @@
-
 import base64
 import html
 import json
@@ -14,8 +13,8 @@ from pathlib import Path
 
 SOURCES = [
     {
-        "name": "AeryxVPN",
-        "url": "https://aeryxvpn-sub.aeryxvpn.workers.dev",
+        "name": "OWPN",
+        "url": "https://raw.githubusercontent.com/ReallySubHuman/vless-converter/refs/heads/main/vless.txt",
         "reject_russian_flag": True,
     },
     {
@@ -70,11 +69,15 @@ def decode_base64_text(value):
 
     try:
         padded = compact + "=" * (-len(compact) % 4)
+
         raw = base64.urlsafe_b64decode(
             padded.encode("ascii")
         )
+
         decoded = raw.decode("utf-8-sig")
+
         return decoded if "://" in decoded else None
+
     except Exception:
         return None
 
@@ -87,16 +90,21 @@ def extract_uris(body):
 
     if not found:
         decoded = decode_base64_text(text)
+
         if decoded:
-            found = URI_RE.findall(html.unescape(decoded))
+            found = URI_RE.findall(
+                html.unescape(decoded)
+            )
 
     if not found:
         fragments = re.findall(
-            r"[A-Za-z0-9_+/=-]{80,}", text
+            r"[A-Za-z0-9_+/=-]{80,}",
+            text
         )
 
         for fragment in fragments:
             decoded = decode_base64_text(fragment)
+
             if decoded:
                 found.extend(URI_RE.findall(decoded))
 
@@ -105,6 +113,7 @@ def extract_uris(body):
 
     for item in found:
         item = item.rstrip(",;)]}，。")
+
         if item not in seen:
             seen.add(item)
             cleaned.append(item)
@@ -127,7 +136,8 @@ def fetch_source(source):
 
         try:
             with urllib.request.urlopen(
-                request, timeout=35
+                request,
+                timeout=35
             ) as response:
                 body = response.read(
                     12 * 1024 * 1024
@@ -144,13 +154,18 @@ def fetch_source(source):
                 )
                 return uris
 
-            errors.append("No supported links")
+            errors.append(
+                f"{user_agent}: no supported links in response"
+            )
 
         except Exception as exc:
-            errors.append(str(exc))
+            errors.append(
+                f"{user_agent}: {exc}"
+            )
 
     raise RuntimeError(
-        f"{source['name']}: download failed: "
+        f"{source['name']}: couldn't extract VLESS/Hysteria2 links. "
+        "The URL may be an HTML/QR page instead of a raw subscription. "
         + " | ".join(errors)
     )
 
@@ -188,6 +203,7 @@ def make_singbox_outbound(uri):
     if not server or not port:
         return None
 
+    # VLESS
     if scheme == "vless":
         user_id = urllib.parse.unquote(
             parsed.username or ""
@@ -205,6 +221,7 @@ def make_singbox_outbound(uri):
         }
 
         flow = query.get("flow")
+
         if flow:
             outbound["flow"] = flow
 
@@ -214,26 +231,28 @@ def make_singbox_outbound(uri):
             transport = {"type": "ws"}
 
             path = query.get("path")
-            host = query.get("host")
+            host_header = query.get("host")
 
             if path:
                 transport["path"] = path
 
-            if host:
-                transport["headers"] = {"Host": host}
+            if host_header:
+                transport["headers"] = {
+                    "Host": host_header
+                }
 
             outbound["transport"] = transport
 
         elif network == "grpc":
             transport = {"type": "grpc"}
 
-            service = (
+            service_name = (
                 query.get("serviceName")
                 or query.get("service_name")
             )
 
-            if service:
-                transport["service_name"] = service
+            if service_name:
+                transport["service_name"] = service_name
 
             outbound["transport"] = transport
 
@@ -241,13 +260,15 @@ def make_singbox_outbound(uri):
             transport = {"type": "httpupgrade"}
 
             path = query.get("path")
-            host = query.get("host")
+            host_header = query.get("host")
 
             if path:
                 transport["path"] = path
 
-            if host:
-                transport["headers"] = {"Host": host}
+            if host_header:
+                transport["headers"] = {
+                    "Host": host_header
+                }
 
             outbound["transport"] = transport
 
@@ -313,6 +334,7 @@ def make_singbox_outbound(uri):
 
         return outbound
 
+    # Hysteria2
     if scheme in {"hy2", "hysteria2"}:
         username = urllib.parse.unquote(
             parsed.username or ""
@@ -364,10 +386,7 @@ def make_singbox_outbound(uri):
         )
 
         if obfs_type:
-            if (
-                obfs_type != "salamander"
-                or not obfs_password
-            ):
+            if obfs_type != "salamander" or not obfs_password:
                 return None
 
             outbound["obfs"] = {
@@ -382,7 +401,8 @@ def make_singbox_outbound(uri):
 
 def free_local_port():
     with socket.socket(
-        socket.AF_INET, socket.SOCK_STREAM
+        socket.AF_INET,
+        socket.SOCK_STREAM
     ) as sock:
         sock.bind(("127.0.0.1", 0))
         return sock.getsockname()[1]
@@ -401,6 +421,7 @@ def wait_for_port(process, port):
                 timeout=0.25
             ):
                 return True
+
         except OSError:
             time.sleep(0.1)
 
@@ -412,14 +433,19 @@ def probe_through_singbox(outbound):
 
     config = {
         "log": {"level": "error"},
+
         "inbounds": [{
             "type": "socks",
             "tag": "local-socks",
             "listen": "127.0.0.1",
             "listen_port": port,
         }],
+
         "outbounds": [outbound],
-        "route": {"final": "tested-proxy"},
+
+        "route": {
+            "final": "tested-proxy"
+        },
     }
 
     with tempfile.TemporaryDirectory(
@@ -446,7 +472,7 @@ def probe_through_singbox(outbound):
         )
 
         if checked.returncode != 0:
-            print("  Invalid sing-box config")
+            print("  sing-box rejected config")
             return None
 
         process = subprocess.Popen(
@@ -521,6 +547,7 @@ def probe_through_singbox(outbound):
 
             try:
                 process.wait(timeout=2)
+
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait(timeout=2)
@@ -537,9 +564,9 @@ def get_five_working(source):
             )
         ]
 
+    tested = 0
     passed = []
     seen = set()
-    tested = 0
 
     for uri in candidates:
         if uri in seen:
@@ -552,20 +579,21 @@ def get_five_working(source):
         if outbound is None:
             continue
 
-        if tested >= MAX_CANDIDATES_TO_TEST_PER_SOURCE:
-            break
-
         tested += 1
 
+        if tested > MAX_CANDIDATES_TO_TEST_PER_SOURCE:
+            break
+
         print(
-            f"{source['name']}: testing "
-            f"{tested}/{MAX_CANDIDATES_TO_TEST_PER_SOURCE}"
+            f"{source['name']}: "
+            f"testing candidate {tested}/"
+            f"{MAX_CANDIDATES_TO_TEST_PER_SOURCE}"
         )
 
         latency = probe_through_singbox(outbound)
 
         if latency is not None:
-            print(f"  PASS: {latency:.2f}s")
+            print(f"  PASS ({latency:.2f}s)")
             passed.append((latency, uri))
         else:
             print("  FAIL")
@@ -579,12 +607,13 @@ def get_five_working(source):
     if len(selected) < PER_SOURCE_LIMIT:
         raise RuntimeError(
             f"{source['name']}: only {len(selected)} "
-            f"configs passed. Need 5. "
-            "Old cat.txt preserved."
+            f"stable configs passed; need {PER_SOURCE_LIMIT}. "
+            "Existing cat.txt will be kept."
         )
 
     print(
-        f"{source['name']}: selected {len(selected)}"
+        f"{source['name']}: selected "
+        f"{len(selected)} configs from {tested} tested"
     )
 
     return selected
@@ -599,8 +628,8 @@ def main():
 
     if len(all_configs) != 10:
         raise RuntimeError(
-            "Expected exactly 10 configs. "
-            "Old cat.txt preserved."
+            "Expected exactly 10 configs; "
+            "refusing to overwrite cat.txt"
         )
 
     content = HEADER + "\n".join(all_configs) + "\n"
@@ -611,7 +640,7 @@ def main():
     )
 
     print(
-        f"SUCCESS: saved {len(all_configs)} configs"
+        f"Done: wrote {len(all_configs)} configs to {OUTPUT_FILE}"
     )
 
 
