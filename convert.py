@@ -16,15 +16,27 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+# title = название профиля в Happ (порядок источников = порядок профилей)
+# take_all = взять ВСЕ конфиги источника без проверки и без лимита
 SOURCES = [
     {
+        "name": "vless-converter",
+        "title": "Северная Корея #1",
+        "url": "https://raw.githubusercontent.com/ReallySubHuman/vless-converter/refs/heads/main/vless.txt",
+        "reject_russian_flag": False,
+        "fill_unverified": True,
+        "take_all": True,
+    },
+    {
         "name": "vlessforu",
+        "title": "Северная Корея #2",
         "url": "https://sub.vlessfo.ru/vlessforu/working_configs.txt",
         "reject_russian_flag": True,
         "fill_unverified": True,
     },
     {
         "name": "happcluchi",
+        "title": "Китай #1",
         "url": "https://freevpn.happcluchi.workers.dev",
         "reject_russian_flag": False,
         "fill_unverified": True,
@@ -38,6 +50,7 @@ SOURCES = [
     },
     {
         "name": "gidroksi",
+        "title": "Китай #2",
         "url": "https://gidroksi.fun/free",
         "reject_russian_flag": False,
         "fill_unverified": True,
@@ -47,7 +60,7 @@ SOURCES = [
 OUTPUT_FILE = Path("cat.txt")
 SING_BOX = os.environ.get("SING_BOX", "sing-box")
 
-PER_SOURCE_LIMIT = 10          # конфигов в одном JSON
+PER_SOURCE_LIMIT = 10          # конфигов в одном JSON (кроме take_all)
 MAX_CANDIDATES_TO_TEST_PER_SOURCE = 200   # тестируем почти всё, чтобы найти лучший пинг
 SOURCE_TIME_BUDGET = 780                  # сек на один источник (защита от долгого job)
 WORKERS = 4                    # параллельных проверок
@@ -57,12 +70,10 @@ MIN_SUCCESSES = 1              # достаточно одного ответа 
 MIN_TOTAL_TO_WRITE = 1         # минимум профилей, чтобы перезаписать cat.txt
 
 # --- JSON-режим для Happ -------------------------------------------------
-# Один JSON на источник, внутри все его конфиги + автовыбор лучшего по пингу.
+# Один JSON на источник, внутри конфиги + автовыбор лучшего по пингу.
 # cat.txt = ЧИСТЫЙ JSON (без #-заголовков, иначе Happ пишет "no server link").
-# Название профиля отдаётся HTTP-заголовком через worker.js.
 BALANCER_PROBE_URL = "https://www.gstatic.com/generate_204"
 BALANCER_PROBE_INTERVAL = "1m"
-PROFILE_TITLE = "Кошка жена ВПН 🐈"
 
 # Откуда считаем «близко»: где живёт аудитория подписки (по умолчанию Москва).
 # Пинг с раннера GitHub (США) для пользователей не показателен, поэтому
@@ -509,7 +520,7 @@ def make_xray_outbound(uri, tag):
     }
 
 
-def build_happ_json(source_name, uris):
+def build_happ_json(title, uris):
     """Один xray-JSON на источник: все конфиги + автовыбор по пингу."""
     proxies = []
 
@@ -522,7 +533,7 @@ def build_happ_json(source_name, uris):
         return None
 
     config = {
-        "remarks": f"{PROFILE_TITLE} · Авто {source_name} ({len(proxies)})",
+        "remarks": title,
         "log": {"loglevel": "warning"},
         "dns": {"servers": ["1.1.1.1", "8.8.8.8"], "queryStrategy": "UseIP"},
         "inbounds": [
@@ -932,7 +943,45 @@ def uri_endpoint(uri):
         return None, None
 
 
+def get_all(source):
+    """Режим take_all: берём ВСЕ vless-конфиги источника, без проверки и лимита.
+    Убираем только дубли и заглушки (127.0.0.1 и т.п.)."""
+    candidates = fetch_source(source)
+
+    if source.get("reject_russian_flag"):
+        candidates = [
+            item
+            for item in candidates
+            if "\U0001F1F7\U0001F1FA" not in urllib.parse.unquote(html.unescape(item))
+        ]
+
+    result = []
+    seen = set()
+
+    for uri in candidates:
+        if not uri.lower().startswith("vless://"):
+            continue
+
+        key = dedupe_key(uri)
+        if key in seen:
+            continue
+        seen.add(key)
+
+        host, _ = uri_endpoint(uri)
+        if not host or host.startswith("127.") or host in {"0.0.0.0", "localhost"}:
+            continue
+
+        result.append(uri)
+
+    print(f"{source['name']}: take_all -> {len(result)} configs (no testing)")
+    return result
+
+
 def get_working(source):
+    if source.get("take_all"):
+        return get_all(source)
+
+    limit = source.get("limit", PER_SOURCE_LIMIT)
     candidates = fetch_source(source)
 
     if source["reject_russian_flag"]:
@@ -1049,7 +1098,7 @@ def get_working(source):
         print(f"{source['name']}: failure reasons -> {summary}")
 
     print(f"{source['name']}: {len(passed)} passed, best pings:")
-    for latency, uri in passed[:PER_SOURCE_LIMIT + 3]:
+    for latency, uri in passed[:limit + 3]:
         host, _ = uri_endpoint(uri)
         est, country = estimate_ping_ms(host, geo)
         print(
@@ -1057,12 +1106,12 @@ def get_working(source):
             f"runner {latency:.2f}s  {host}"
         )
 
-    selected = [uri for _, uri in passed[:PER_SOURCE_LIMIT]]
+    selected = [uri for _, uri in passed[:limit]]
     verified = len(selected)
 
     # добираем непроверенными, если проверенных мало: берём серверы с
     # открытым портом, самые быстрые по TCP-отклику идут первыми
-    if source.get("fill_unverified") and len(selected) < PER_SOURCE_LIMIT:
+    if source.get("fill_unverified") and len(selected) < limit:
         pool_unverified = [
             (index, uri) for index, uri in failed if index not in closed
         ] + [(index, uri) for index, uri, _ in untestable]
@@ -1082,7 +1131,7 @@ def get_working(source):
         ranked.sort(key=lambda entry: geo_key(entry[1][1], geo_fill, entry[0]))
 
         for rtt, (index, uri) in ranked:
-            if len(selected) >= PER_SOURCE_LIMIT:
+            if len(selected) >= limit:
                 break
 
             print(
@@ -1091,10 +1140,10 @@ def get_working(source):
             )
             selected.append(uri)
 
-    if len(selected) < PER_SOURCE_LIMIT:
+    if len(selected) < limit:
         print(
             f"WARNING: {source['name']}: only {len(selected)} configs "
-            f"(wanted {PER_SOURCE_LIMIT})"
+            f"(wanted {limit})"
         )
 
     print(
@@ -1149,7 +1198,7 @@ def print_environment():
 def main():
     print_environment()
 
-    profiles = []   # по одному xray-JSON на источник
+    profiles = []   # по одному xray-JSON на источник, в порядке SOURCES
 
     for source in SOURCES:
         try:
@@ -1158,7 +1207,7 @@ def main():
             print(f"ERROR in source {source['name']}: {exc}")
             continue
 
-        profile = build_happ_json(source["name"], uris)
+        profile = build_happ_json(source["title"], uris)
 
         if profile is None:
             print(
@@ -1169,7 +1218,7 @@ def main():
         count = len(profile["outbounds"]) - 2   # минус direct и block
         skipped = len(uris) - count
         print(
-            f"{source['name']}: JSON profile with {count} configs "
+            f"{source['name']}: JSON profile '{source['title']}' with {count} configs "
             f"({skipped} skipped: not vless / unsupported)"
         )
         profiles.append(profile)
