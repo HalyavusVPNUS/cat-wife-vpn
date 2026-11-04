@@ -24,6 +24,7 @@ SOURCES = [
         "name": "happcluchi",
         "url": "https://freevpn.happcluchi.workers.dev",
         "reject_russian_flag": False,
+        "fill_unverified": True,
         # берём только конфиги, в названии которых есть один из маркеров
         # (🇪🇺 Европа, 🇸🇪 Швеция, 🇳🇱 Нидерланды)
         "allowed_countries": [
@@ -39,15 +40,11 @@ SING_BOX = os.environ.get("SING_BOX", "sing-box")
 
 PER_SOURCE_LIMIT = 5
 MAX_CANDIDATES_TO_TEST_PER_SOURCE = 60
-WORKERS = 8                    # параллельных проверок
+WORKERS = 4                    # параллельных проверок
 SOCKS_STARTUP_TIMEOUT = 8
 PROBE_TIMEOUT = 10
 MIN_SUCCESSES = 2              # сколько из PROBE_URLS должно ответить
 MIN_TOTAL_TO_WRITE = 1         # минимум конфигов, чтобы перезаписать cat.txt
-
-# Если 1 — когда ни один конфиг не прошёл реальную проверку, берём те,
-# у которых хотя бы открывается TCP-порт сервера (может быть мусор!)
-TCP_FALLBACK = os.environ.get("TCP_FALLBACK", "0") == "1"
 
 HEADER = """#profile-title: Кошка жена ВПН 🐈
 #profile-update-interval: 1
@@ -534,6 +531,26 @@ def matches_country(uri, markers):
     return any(marker.lower() in fragment for marker in markers)
 
 
+def tcp_open(host, port):
+    if not host or not port:
+        return False
+    if host.startswith("127.") or host in {"localhost", "0.0.0.0"}:
+        return False
+    try:
+        with socket.create_connection((host, port), timeout=5):
+            return True
+    except OSError:
+        return False
+
+
+def uri_endpoint(uri):
+    try:
+        parsed = urllib.parse.urlsplit(uri)
+        return parsed.hostname, parsed.port
+    except ValueError:
+        return None, None
+
+
 def get_working(source):
     candidates = fetch_source(source)
 
@@ -541,7 +558,7 @@ def get_working(source):
         candidates = [
             item
             for item in candidates
-            if "🇷🇺" not in urllib.parse.unquote(html.unescape(item))
+            if "\U0001F1F7\U0001F1FA" not in urllib.parse.unquote(html.unescape(item))
         ]
 
     allowed = source.get("allowed_countries")
@@ -556,7 +573,7 @@ def get_working(source):
             f"{len(candidates)} of {before} links"
         )
 
-    jobs = []
+    jobs = []          # (index, uri, outbound | None)
     seen = set()
 
     for uri in candidates:
@@ -565,37 +582,53 @@ def get_working(source):
         seen.add(uri)
 
         outbound = make_singbox_outbound(uri)
-        if outbound is None:
+
+        # то, что sing-box проверить не может (xhttp и т.п.), оставляем
+        # только для vless: такие конфиги работают в Happ/xray
+        if outbound is None and not uri.lower().startswith("vless://"):
             continue
 
-        jobs.append((uri, outbound))
+        jobs.append((len(jobs) + 1, uri, outbound))
 
         if len(jobs) >= MAX_CANDIDATES_TO_TEST_PER_SOURCE:
             break
 
-    print(f"{source['name']}: {len(jobs)} candidates to test")
+    testable = [j for j in jobs if j[2] is not None]
+    untestable = [j for j in jobs if j[2] is None]
+
+    print(
+        f"{source['name']}: {len(testable)} testable, "
+        f"{len(untestable)} untestable (xhttp etc.)"
+    )
 
     passed = []
-    failed_outbounds = []
+    failed = []
     enough = threading.Event()
-    stop_after = PER_SOURCE_LIMIT * 2  # запас, чтобы выбрать самые быстрые
+    stop_after = PER_SOURCE_LIMIT * 2
 
     def work(index, uri, outbound):
         if enough.is_set():
-            return index, uri, outbound, None, "skipped (enough found)"
+            return index, uri, None, "skipped"
+
         latency, reason = probe_through_singbox(outbound)
-        return index, uri, outbound, latency, reason
+
+        # второй заход: бесплатные узлы часто отвечают не с первого раза
+        if latency is None and not reason.startswith("config rejected"):
+            time.sleep(1)
+            latency, reason = probe_through_singbox(outbound)
+
+        return index, uri, latency, reason
 
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
         futures = [
-            pool.submit(work, i, uri, outbound)
-            for i, (uri, outbound) in enumerate(jobs, 1)
+            pool.submit(work, index, uri, outbound)
+            for index, uri, outbound in testable
         ]
 
         for future in as_completed(futures):
-            index, uri, outbound, latency, reason = future.result()
+            index, uri, latency, reason = future.result()
 
-            if reason.startswith("skipped"):
+            if reason == "skipped":
                 continue
 
             if latency is not None:
@@ -605,26 +638,43 @@ def get_working(source):
                     enough.set()
             else:
                 print(f"{source['name']} #{index}: FAIL - {reason}")
-                failed_outbounds.append((uri, outbound))
+                failed.append((index, uri))
 
     passed.sort(key=lambda item: item[0])
     selected = [uri for _, uri in passed[:PER_SOURCE_LIMIT]]
+    verified = len(selected)
 
-    if not selected and TCP_FALLBACK:
-        print(f"{source['name']}: TCP fallback enabled")
-        for uri, outbound in failed_outbounds:
-            if tcp_reachable(outbound):
-                selected.append(uri)
+    # добираем непроверенными (порт сервера открыт), если проверенных мало
+    if source.get("fill_unverified") and len(selected) < PER_SOURCE_LIMIT:
+        pool_unverified = sorted(
+            failed + [(index, uri) for index, uri, _ in untestable]
+        )
+
+        for index, uri in pool_unverified:
             if len(selected) >= PER_SOURCE_LIMIT:
                 break
 
+            host, port = uri_endpoint(uri)
+
+            if tcp_open(host, port):
+                print(
+                    f"{source['name']} #{index}: UNVERIFIED "
+                    f"(port open, added as filler)"
+                )
+                selected.append(uri)
+            else:
+                print(f"{source['name']} #{index}: port closed, skipped")
+
     if len(selected) < PER_SOURCE_LIMIT:
         print(
-            f"WARNING: {source['name']}: only {len(selected)} configs passed "
+            f"WARNING: {source['name']}: only {len(selected)} configs "
             f"(wanted {PER_SOURCE_LIMIT})"
         )
 
-    print(f"{source['name']}: selected {len(selected)} configs")
+    print(
+        f"{source['name']}: selected {len(selected)} configs "
+        f"({verified} verified, {len(selected) - verified} unverified)"
+    )
     return selected
 
 
