@@ -13,7 +13,7 @@ from pathlib import Path
 
 SOURCES = [
     {
-        "name": "OWPN",
+        "name": "vless-converter",
         "url": "https://raw.githubusercontent.com/ReallySubHuman/vless-converter/refs/heads/main/vless.txt",
         "reject_russian_flag": True,
     },
