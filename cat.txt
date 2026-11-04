@@ -1,12 +1,6 @@
-#profile-title: Кошка жена ВПН 🐈
-#profile-update-interval: 1
-#subscription-userinfo: expire=86877705600; total=10995116277760; used=0
-#profile-web-page-url: https://t.me/halyava_vpnx
-#announce: 👲 Партия выдать тебе кошка жена + полный миска рис
-
 [
   {
-    "remarks": "🐈 Авто · vless-converter (5)",
+    "remarks": "Кошка жена ВПН 🐈 · Авто vless-converter (5)",
     "log": {
       "loglevel": "warning"
     },
@@ -126,7 +120,7 @@
               "port": 443,
               "users": [
                 {
-                  "id": "7955bf18-35c4-412d-aabd-c0b36c793063",
+                  "id": "c720cb74-4c84-4fce-b8ae-637dbaa16199",
                   "encryption": "none"
                 }
               ]
@@ -154,6 +148,38 @@
         "settings": {
           "vnext": [
             {
+              "address": "185.178.208.140",
+              "port": 443,
+              "users": [
+                {
+                  "id": "7955bf18-35c4-412d-aabd-c0b36c793063",
+                  "encryption": "none"
+                }
+              ]
+            }
+          ]
+        },
+        "streamSettings": {
+          "network": "ws",
+          "wsSettings": {
+            "path": "/static/events/900598fa7500/",
+            "headers": {
+              "Host": "gran-game.pro"
+            }
+          },
+          "security": "tls",
+          "tlsSettings": {
+            "serverName": "gran-game.pro",
+            "fingerprint": "firefox"
+          }
+        }
+      },
+      {
+        "tag": "proxy-5",
+        "protocol": "vless",
+        "settings": {
+          "vnext": [
+            {
               "address": "217.19.122.156",
               "port": 443,
               "users": [
@@ -177,36 +203,6 @@
           "tlsSettings": {
             "serverName": "z1q3pv4g78.rucdncomp.pro",
             "fingerprint": "random"
-          }
-        }
-      },
-      {
-        "tag": "proxy-5",
-        "protocol": "vless",
-        "settings": {
-          "vnext": [
-            {
-              "address": "185.86.147.143",
-              "port": 7443,
-              "users": [
-                {
-                  "id": "ebac3b78-20c9-41b7-963a-35dd91ca927b",
-                  "encryption": "none",
-                  "flow": "xtls-rprx-vision"
-                }
-              ]
-            }
-          ]
-        },
-        "streamSettings": {
-          "network": "tcp",
-          "security": "reality",
-          "realitySettings": {
-            "serverName": "passport.yandex.ru",
-            "fingerprint": "firefox",
-            "publicKey": "0w339GBhpDiYwa9Wgqu3z3epu8dHAzeYUFXPtvzK8To",
-            "shortId": "190c27ae5f2e4d2c",
-            "spiderX": ""
           }
         }
       },
@@ -251,7 +247,7 @@
     }
   },
   {
-    "remarks": "🐈 Авто · happcluchi (5)",
+    "remarks": "Кошка жена ВПН 🐈 · Авто happcluchi (5)",
     "log": {
       "loglevel": "warning"
     },
@@ -363,36 +359,6 @@
         "settings": {
           "vnext": [
             {
-              "address": "apply.betust.net",
-              "port": 443,
-              "users": [
-                {
-                  "id": "fb37d713-0ed3-4146-b085-a5c879a9aafa",
-                  "encryption": "none",
-                  "flow": "xtls-rprx-vision"
-                }
-              ]
-            }
-          ]
-        },
-        "streamSettings": {
-          "network": "tcp",
-          "security": "reality",
-          "realitySettings": {
-            "serverName": "apply.betust.net",
-            "fingerprint": "firefox",
-            "publicKey": "T98nmnCp0qrmkH1Oq92Tk94sCYa5RuuEjp8bDDbdVxk",
-            "shortId": "b20168a5",
-            "spiderX": "/"
-          }
-        }
-      },
-      {
-        "tag": "proxy-4",
-        "protocol": "vless",
-        "settings": {
-          "vnext": [
-            {
               "address": "join.betust.net",
               "port": 443,
               "users": [
@@ -413,6 +379,36 @@
             "fingerprint": "firefox",
             "publicKey": "GQul8Ak0VO_z4FW_m_R-xsQbwd2e1rWZO-XfMmKmpQE",
             "shortId": "351224a7",
+            "spiderX": "/"
+          }
+        }
+      },
+      {
+        "tag": "proxy-4",
+        "protocol": "vless",
+        "settings": {
+          "vnext": [
+            {
+              "address": "apply.betust.net",
+              "port": 443,
+              "users": [
+                {
+                  "id": "fb37d713-0ed3-4146-b085-a5c879a9aafa",
+                  "encryption": "none",
+                  "flow": "xtls-rprx-vision"
+                }
+              ]
+            }
+          ]
+        },
+        "streamSettings": {
+          "network": "tcp",
+          "security": "reality",
+          "realitySettings": {
+            "serverName": "apply.betust.net",
+            "fingerprint": "firefox",
+            "publicKey": "T98nmnCp0qrmkH1Oq92Tk94sCYa5RuuEjp8bDDbdVxk",
+            "shortId": "b20168a5",
             "spiderX": "/"
           }
         }
