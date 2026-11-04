@@ -1,6 +1,7 @@
 import base64
 import html
 import json
+import math
 import os
 import random
 import re
@@ -48,6 +49,15 @@ SOCKS_STARTUP_TIMEOUT = 8
 PROBE_TIMEOUT = 10
 MIN_SUCCESSES = 1              # достаточно одного ответа через прокси (туннель жив)
 MIN_TOTAL_TO_WRITE = 1         # минимум конфигов, чтобы перезаписать cat.txt
+
+# Откуда считаем «близко»: где живёт аудитория подписки (по умолчанию Москва).
+# Пинг с раннера GitHub (США) для пользователей не показателен, поэтому
+# рабочие конфиги ранжируются по расстоянию до этой точки.
+REFERENCE_LOCATION = (
+    float(os.environ.get("REF_LAT", "55.75")),
+    float(os.environ.get("REF_LON", "37.62")),
+)
+GEO_BUCKET_MS = 25   # конфиги в пределах 25 мс считаем равными, дальше решает замер
 
 HEADER = """#profile-title: Кошка жена ВПН 🐈
 #profile-update-interval: 1
@@ -546,7 +556,7 @@ def probe_through_singbox(outbound):
                         return measure_latency(port, latencies), "ok"
 
                     log = log_path.read_text(errors="replace")
-                    return None, f"{last_error} | sing-box: {tail(log, 120)}"
+                    return None, f"{last_error} | sing-box: {tail(log, 300)}"
 
                 finally:
                     if process.poll() is None:
@@ -563,6 +573,71 @@ def probe_through_singbox(outbound):
     finally:
         with _port_lock:
             _used_ports.discard(port)
+
+
+# ---------------------------------------------------------- geo ranking
+
+def haversine_km(lat1, lon1, lat2, lon2):
+    r = 6371.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp = p2 - p1
+    dl = math.radians(lon2 - lon1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(a))
+
+
+def geolocate(hosts):
+    """host -> (lat, lon, country). Бесплатный ip-api.com, пачками по 100."""
+    resolved = {}
+
+    for host in hosts:
+        if not host:
+            continue
+        try:
+            resolved[host] = socket.gethostbyname(host)
+        except OSError:
+            pass
+
+    ips = sorted(set(resolved.values()))
+    by_ip = {}
+
+    for i in range(0, len(ips), 100):
+        chunk = ips[i:i + 100]
+        try:
+            request = urllib.request.Request(
+                "http://ip-api.com/batch?fields=status,query,countryCode,lat,lon",
+                data=json.dumps([{"query": ip} for ip in chunk]).encode(),
+                headers={"Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(request, timeout=20) as response:
+                for row in json.loads(response.read().decode()):
+                    if row.get("status") == "success":
+                        by_ip[row["query"]] = (
+                            row["lat"], row["lon"], row.get("countryCode", "??")
+                        )
+        except Exception as exc:
+            print(f"  geolocation failed: {exc}")
+
+    return {
+        host: by_ip[ip] for host, ip in resolved.items() if ip in by_ip
+    }
+
+
+def estimate_ping_ms(host, geo):
+    """Примерный пинг от аудитории до сервера по расстоянию. (мс, страна)."""
+    info = geo.get(host)
+
+    if not info:
+        return 150.0, "??"   # неизвестно: считаем средним
+
+    km = haversine_km(REFERENCE_LOCATION[0], REFERENCE_LOCATION[1], info[0], info[1])
+    return 10 + km / 60, info[2]
+
+
+def geo_key(uri, geo, tiebreak):
+    host, _ = uri_endpoint(uri)
+    est, _ = estimate_ping_ms(host, geo)
+    return (round(est / GEO_BUCKET_MS), tiebreak)
 
 
 # ---------------------------------------------------------- selection
@@ -734,7 +809,9 @@ def get_working(source):
                 kind = reason.split(":")[0][:30]
                 reasons[kind] = reasons.get(kind, 0) + 1
 
-    passed.sort(key=lambda item: item[0])
+    # ранжируем по близости к аудитории, а не по пингу с раннера (он из США)
+    geo = geolocate({uri_endpoint(uri)[0] for _, uri in passed})
+    passed.sort(key=lambda item: geo_key(item[1], geo, item[0]))
 
     if reasons:
         summary = ", ".join(f"{k}: {v}" for k, v in sorted(reasons.items()))
@@ -743,7 +820,11 @@ def get_working(source):
     print(f"{source['name']}: {len(passed)} passed, best pings:")
     for latency, uri in passed[:PER_SOURCE_LIMIT + 3]:
         host, _ = uri_endpoint(uri)
-        print(f"    {latency:.2f}s  {host}")
+        est, country = estimate_ping_ms(host, geo)
+        print(
+            f"    ~{est:.0f} ms from audience ({country}), "
+            f"runner {latency:.2f}s  {host}"
+        )
 
     selected = [uri for _, uri in passed[:PER_SOURCE_LIMIT]]
     verified = len(selected)
@@ -766,7 +847,8 @@ def get_working(source):
                 if rtt is not None:
                     ranked.append((rtt, item))
 
-        ranked.sort(key=lambda entry: entry[0])
+        geo_fill = geolocate({uri_endpoint(item[1])[0] for _, item in ranked})
+        ranked.sort(key=lambda entry: geo_key(entry[1][1], geo_fill, entry[0]))
 
         for rtt, (index, uri) in ranked:
             if len(selected) >= PER_SOURCE_LIMIT:
@@ -791,7 +873,51 @@ def get_working(source):
     return selected
 
 
+def print_environment():
+    """Диагностика раннера: версии, прямой доступ в интернет, страна/провайдер."""
+    print("=== environment ===")
+
+    for name, cmd in (
+        ("sing-box", [SING_BOX, "version"]),
+        ("curl", ["curl", "--version"]),
+    ):
+        try:
+            out = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=10
+            ).stdout.strip().splitlines()
+            print(f"{name}: {out[0] if out else 'no output'}")
+        except Exception as exc:
+            print(f"{name}: ERROR {exc}")
+
+    try:
+        result = subprocess.run(
+            [
+                "curl", "--silent", "--max-time", "8",
+                "--output", "/dev/null", "--write-out", "%{http_code}",
+                "https://www.gstatic.com/generate_204",
+            ],
+            capture_output=True, text=True, timeout=12,
+        )
+        print(f"direct gstatic probe (no proxy): http={result.stdout.strip()} rc={result.returncode}")
+    except Exception as exc:
+        print(f"direct probe: ERROR {exc}")
+
+    try:
+        with urllib.request.urlopen("https://ipinfo.io/json", timeout=8) as response:
+            info = json.loads(response.read().decode("utf-8", errors="replace"))
+        print(
+            f"runner location: {info.get('country')} / {info.get('region')} / "
+            f"{info.get('org')}"
+        )
+    except Exception as exc:
+        print(f"runner location: unknown ({exc})")
+
+    print("===================")
+
+
 def main():
+    print_environment()
+
     all_configs = []
 
     for source in SOURCES:
