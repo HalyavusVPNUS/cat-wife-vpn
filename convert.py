@@ -16,19 +16,15 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-# "title" - название профиля в Happ. Флаг подставляется автоматически
-# по стране из названия (см. COUNTRY_FLAGS ниже).
 SOURCES = [
     {
         "name": "vlessforu",
-        "title": "Северная Корея #1",
         "url": "https://sub.vlessfo.ru/vlessforu/working_configs.txt",
         "reject_russian_flag": True,
         "fill_unverified": True,
     },
     {
         "name": "happcluchi",
-        "title": "Северная Корея #2",
         "url": "https://freevpn.happcluchi.workers.dev",
         "reject_russian_flag": False,
         "fill_unverified": True,
@@ -42,34 +38,11 @@ SOURCES = [
     },
     {
         "name": "gidroksi",
-        "title": "Китай #1",
         "url": "https://gidroksi.fun/free",
         "reject_russian_flag": False,
         "fill_unverified": True,
     },
 ]
-
-# Страна в названии (маленькими буквами) -> эмодзи флага.
-# Добавляй свои страны сюда.
-COUNTRY_FLAGS = {
-    "северная корея": "🇰🇵",
-    "южная корея": "🇰🇷",
-    "китай": "🇨🇳",
-    "россия": "🇷🇺",
-    "сша": "🇺🇸",
-    "германия": "🇩🇪",
-    "нидерланды": "🇳🇱",
-    "швеция": "🇸🇪",
-    "финляндия": "🇫🇮",
-    "франция": "🇫🇷",
-    "великобритания": "🇬🇧",
-    "япония": "🇯🇵",
-    "сингапур": "🇸🇬",
-    "турция": "🇹🇷",
-    "казахстан": "🇰🇿",
-    "польша": "🇵🇱",
-    "европа": "🇪🇺",
-}
 
 OUTPUT_FILE = Path("cat.txt")
 SING_BOX = os.environ.get("SING_BOX", "sing-box")
@@ -86,9 +59,10 @@ MIN_TOTAL_TO_WRITE = 1         # минимум профилей, чтобы п�
 # --- JSON-режим для Happ -------------------------------------------------
 # Один JSON на источник, внутри все его конфиги + автовыбор лучшего по пингу.
 # cat.txt = ЧИСТЫЙ JSON (без #-заголовков, иначе Happ пишет "no server link").
-# Название всей подписки отдаётся HTTP-заголовком через worker.js.
+# Название профиля отдаётся HTTP-заголовком через worker.js.
 BALANCER_PROBE_URL = "https://www.gstatic.com/generate_204"
 BALANCER_PROBE_INTERVAL = "1m"
+PROFILE_TITLE = "Кошка жена ВПН 🐈"
 
 # Откуда считаем «близко»: где живёт аудитория подписки (по умолчанию Москва).
 # Пинг с раннера GitHub (США) для пользователей не показателен, поэтому
@@ -122,23 +96,6 @@ def ok_status(code):
 
 _port_lock = threading.Lock()
 _used_ports = set()
-
-
-def flag_for(title):
-    """Эмодзи флага по названию страны в тексте (пустая строка, если не нашли)."""
-    lowered = title.lower()
-
-    # длинные названия первыми, чтобы "северная корея" не поймалась как "корея"
-    for country in sorted(COUNTRY_FLAGS, key=len, reverse=True):
-        if country in lowered:
-            return COUNTRY_FLAGS[country]
-
-    return ""
-
-
-def profile_remarks(title):
-    flag = flag_for(title)
-    return f"{flag} {title}" if flag else title
 
 
 # ---------------------------------------------------------------- fetching
@@ -552,7 +509,7 @@ def make_xray_outbound(uri, tag):
     }
 
 
-def build_happ_json(title, uris):
+def build_happ_json(source_name, uris):
     """Один xray-JSON на источник: все конфиги + автовыбор по пингу."""
     proxies = []
 
@@ -565,7 +522,7 @@ def build_happ_json(title, uris):
         return None
 
     config = {
-        "remarks": profile_remarks(title),
+        "remarks": f"{PROFILE_TITLE} · Авто {source_name} ({len(proxies)})",
         "log": {"loglevel": "warning"},
         "dns": {"servers": ["1.1.1.1", "8.8.8.8"], "queryStrategy": "UseIP"},
         "inbounds": [
@@ -1201,7 +1158,7 @@ def main():
             print(f"ERROR in source {source['name']}: {exc}")
             continue
 
-        profile = build_happ_json(source["title"], uris)
+        profile = build_happ_json(source["name"], uris)
 
         if profile is None:
             print(
@@ -1212,7 +1169,7 @@ def main():
         count = len(profile["outbounds"]) - 2   # минус direct и block
         skipped = len(uris) - count
         print(
-            f"{source['name']}: JSON profile '{profile['remarks']}' with {count} configs "
+            f"{source['name']}: JSON profile with {count} configs "
             f"({skipped} skipped: not vless / unsupported)"
         )
         profiles.append(profile)
