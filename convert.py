@@ -1,18 +1,36 @@
 import base64
+import html
+import json
+import os
+import re
+import socket
+import subprocess
+import tempfile
+import time
+import urllib.parse
 import urllib.request
-from urllib.parse import urlsplit, unquote
+from pathlib import Path
 
-SOURCE_URL = "https://freevpn.happcluchi.workers.dev"
-OUTPUT_FILE = "cat.txt"
+SOURCES = [
+    {
+        "name": "OWPN",
+        "url": "https://owpn-key.duckdns.org/sub/6d55ba5cefd846d19b3b5f94d59a2f3b1eb2e02110da427b",
+        "reject_russian_flag": True,
+    },
+    {
+        "name": "Gidroksi",
+        "url": "https://gidroksi.fun/free",
+        "reject_russian_flag": False,
+    },
+]
 
-MAX_CONFIGS = 10
+OUTPUT_FILE = Path("cat.txt")
+SING_BOX = os.environ.get("SING_BOX", "sing-box")
 
-ALLOWED_SCHEMES = {
-    "vless",
-    "hy2",
-    "hysteria2",
-    "hysteria"
-}
+PER_SOURCE_LIMIT = 5
+MAX_CANDIDATES_TO_TEST_PER_SOURCE = 35
+SOCKS_STARTUP_TIMEOUT = 5
+PROBE_TIMEOUT = 7
 
 HEADER = """#profile-title: Кошка жена ВПН 🐈
 #profile-update-interval: 1
@@ -22,166 +40,608 @@ HEADER = """#profile-title: Кошка жена ВПН 🐈
 
 """
 
+URI_RE = re.compile(
+    r"""(?i)(?:vless|hysteria2|hy2)://[^\s<>"'`]+"""
+)
 
-def download_subscription():
-    request = urllib.request.Request(
-        SOURCE_URL,
-        headers={"User-Agent": "Mozilla/5.0"}
-    )
+USER_AGENTS = [
+    "sing-box/1.14.4",
+    "v2rayN/7.0",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36",
+]
 
-    with urllib.request.urlopen(request, timeout=40) as response:
-        data = response.read().decode("utf-8-sig").strip()
-
-    # Источник обычно отдаёт обычный текст.
-    # Base64 оставлен как запасной вариант.
-    if "://" not in data:
-        try:
-            compact = "".join(data.split())
-
-            decoded = base64.b64decode(
-                compact + "=" * (-len(compact) % 4),
-                validate=True
-            ).decode("utf-8-sig")
-
-            if "://" in decoded:
-                data = decoded
-
-        except Exception:
-            pass
-
-    return data
+PROBE_URLS = [
+    "https://www.gstatic.com/generate_204",
+    "https://cp.cloudflare.com/generate_204",
+    "https://www.gstatic.com/generate_204",
+    "https://cp.cloudflare.com/generate_204",
+]
 
 
-def get_configs(data):
-    vless = []
-    hysteria = []
+def decode_base64_text(value):
+    compact = re.sub(r"\s+", "", value)
 
+    if len(compact) < 20:
+        return None
+
+    if not re.fullmatch(r"[A-Za-z0-9_+/=-]+", compact):
+        return None
+
+    try:
+        padded = compact + "=" * (-len(compact) % 4)
+
+        raw = base64.urlsafe_b64decode(
+            padded.encode("ascii")
+        )
+
+        decoded = raw.decode("utf-8-sig")
+
+        return decoded if "://" in decoded else None
+
+    except Exception:
+        return None
+
+
+def extract_uris(body):
+    text = html.unescape(body)
+    text = text.replace("\\/", "/").strip()
+
+    found = URI_RE.findall(text)
+
+    if not found:
+        decoded = decode_base64_text(text)
+
+        if decoded:
+            found = URI_RE.findall(
+                html.unescape(decoded)
+            )
+
+    if not found:
+        fragments = re.findall(
+            r"[A-Za-z0-9_+/=-]{80,}",
+            text
+        )
+
+        for fragment in fragments:
+            decoded = decode_base64_text(fragment)
+
+            if decoded:
+                found.extend(URI_RE.findall(decoded))
+
+    cleaned = []
     seen = set()
 
-    for line in data.splitlines():
-        line = line.strip()
+    for item in found:
+        item = item.rstrip(",;)]}，。")
 
-        if "://" not in line:
-            continue
+        if item not in seen:
+            seen.add(item)
+            cleaned.append(item)
 
-        scheme = line.split("://", 1)[0].lower()
+    return cleaned
 
-        # Оставляем только нужные протоколы
-        if scheme not in ALLOWED_SCHEMES:
-            continue
 
-        # Исключаем российские флаги
-        if "🇷🇺" in unquote(line):
-            continue
+def fetch_source(source):
+    errors = []
 
-        # Проверяем адрес и порт
+    for user_agent in USER_AGENTS:
+        request = urllib.request.Request(
+            source["url"],
+            headers={
+                "User-Agent": user_agent,
+                "Accept": "text/plain, */*",
+                "Cache-Control": "no-cache",
+            },
+        )
+
         try:
-            parsed = urlsplit(line)
+            with urllib.request.urlopen(
+                request,
+                timeout=35
+            ) as response:
+                body = response.read(
+                    12 * 1024 * 1024
+                ).decode(
+                    "utf-8-sig",
+                    errors="replace"
+                )
 
-            if not parsed.hostname or not parsed.port:
-                continue
+            uris = extract_uris(body)
 
-            if parsed.hostname.lower() in (
-                "localhost",
-                "127.0.0.1"
+            if uris:
+                print(
+                    f"{source['name']}: extracted {len(uris)} links"
+                )
+                return uris
+
+            errors.append(
+                f"{user_agent}: no supported links in response"
+            )
+
+        except Exception as exc:
+            errors.append(
+                f"{user_agent}: {exc}"
+            )
+
+    raise RuntimeError(
+        f"{source['name']}: couldn't extract VLESS/Hysteria2 links. "
+        "The URL may be an HTML/QR page instead of a raw subscription. "
+        + " | ".join(errors)
+    )
+
+
+def query_dict(parsed):
+    values = urllib.parse.parse_qs(
+        parsed.query,
+        keep_blank_values=True
+    )
+
+    return {
+        key: items[-1]
+        for key, items in values.items()
+        if items
+    }
+
+
+def truthy(value):
+    return str(value).strip().lower() in {
+        "1", "true", "yes", "on"
+    }
+
+
+def make_singbox_outbound(uri):
+    parsed = urllib.parse.urlsplit(uri)
+    scheme = parsed.scheme.lower()
+    query = query_dict(parsed)
+
+    try:
+        server = parsed.hostname
+        port = parsed.port
+    except ValueError:
+        return None
+
+    if not server or not port:
+        return None
+
+    # VLESS
+    if scheme == "vless":
+        user_id = urllib.parse.unquote(
+            parsed.username or ""
+        )
+
+        if not user_id:
+            return None
+
+        outbound = {
+            "type": "vless",
+            "tag": "tested-proxy",
+            "server": server,
+            "server_port": port,
+            "uuid": user_id,
+        }
+
+        flow = query.get("flow")
+
+        if flow:
+            outbound["flow"] = flow
+
+        network = query.get("type", "tcp").lower()
+
+        if network == "ws":
+            transport = {"type": "ws"}
+
+            path = query.get("path")
+            host_header = query.get("host")
+
+            if path:
+                transport["path"] = path
+
+            if host_header:
+                transport["headers"] = {
+                    "Host": host_header
+                }
+
+            outbound["transport"] = transport
+
+        elif network == "grpc":
+            transport = {"type": "grpc"}
+
+            service_name = (
+                query.get("serviceName")
+                or query.get("service_name")
+            )
+
+            if service_name:
+                transport["service_name"] = service_name
+
+            outbound["transport"] = transport
+
+        elif network == "httpupgrade":
+            transport = {"type": "httpupgrade"}
+
+            path = query.get("path")
+            host_header = query.get("host")
+
+            if path:
+                transport["path"] = path
+
+            if host_header:
+                transport["headers"] = {
+                    "Host": host_header
+                }
+
+            outbound["transport"] = transport
+
+        elif network not in {"tcp", "raw", ""}:
+            return None
+
+        security = query.get(
+            "security", "none"
+        ).lower()
+
+        if security in {"tls", "reality"}:
+            tls = {
+                "enabled": True,
+                "server_name": (
+                    query.get("sni")
+                    or query.get("serverName")
+                    or server
+                ),
+            }
+
+            if truthy(query.get("allowInsecure", "")):
+                tls["insecure"] = True
+
+            fingerprint = (
+                query.get("fp")
+                or query.get("fingerprint")
+            )
+
+            if fingerprint:
+                tls["utls"] = {
+                    "enabled": True,
+                    "fingerprint": fingerprint,
+                }
+
+            if security == "reality":
+                public_key = (
+                    query.get("pbk")
+                    or query.get("publicKey")
+                )
+
+                if not public_key:
+                    return None
+
+                reality = {
+                    "enabled": True,
+                    "public_key": public_key,
+                }
+
+                short_id = (
+                    query.get("sid")
+                    or query.get("shortId")
+                )
+
+                if short_id:
+                    reality["short_id"] = short_id
+
+                tls["reality"] = reality
+
+            outbound["tls"] = tls
+
+        elif security not in {"none", ""}:
+            return None
+
+        return outbound
+
+    # Hysteria2
+    if scheme in {"hy2", "hysteria2"}:
+        username = urllib.parse.unquote(
+            parsed.username or ""
+        )
+
+        password_part = urllib.parse.unquote(
+            parsed.password or ""
+        )
+
+        auth = (
+            f"{username}:{password_part}"
+            if password_part
+            else username
+        )
+
+        if not auth:
+            return None
+
+        tls = {
+            "enabled": True,
+            "server_name": query.get("sni") or server,
+        }
+
+        if truthy(query.get("insecure", "")):
+            tls["insecure"] = True
+
+        alpn = query.get("alpn")
+
+        if alpn:
+            tls["alpn"] = [
+                value for value in alpn.split(",")
+                if value
+            ]
+
+        outbound = {
+            "type": "hysteria2",
+            "tag": "tested-proxy",
+            "server": server,
+            "server_port": port,
+            "password": auth,
+            "tls": tls,
+        }
+
+        obfs_type = query.get("obfs", "").lower()
+
+        obfs_password = (
+            query.get("obfs-password")
+            or query.get("obfs_password")
+        )
+
+        if obfs_type:
+            if obfs_type != "salamander" or not obfs_password:
+                return None
+
+            outbound["obfs"] = {
+                "type": "salamander",
+                "password": obfs_password,
+            }
+
+        return outbound
+
+    return None
+
+
+def free_local_port():
+    with socket.socket(
+        socket.AF_INET,
+        socket.SOCK_STREAM
+    ) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
+
+
+def wait_for_port(process, port):
+    deadline = time.monotonic() + SOCKS_STARTUP_TIMEOUT
+
+    while time.monotonic() < deadline:
+        if process.poll() is not None:
+            return False
+
+        try:
+            with socket.create_connection(
+                ("127.0.0.1", port),
+                timeout=0.25
             ):
-                continue
+                return True
 
-        except ValueError:
+        except OSError:
+            time.sleep(0.1)
+
+    return False
+
+
+def probe_through_singbox(outbound):
+    port = free_local_port()
+
+    config = {
+        "log": {"level": "error"},
+
+        "inbounds": [{
+            "type": "socks",
+            "tag": "local-socks",
+            "listen": "127.0.0.1",
+            "listen_port": port,
+        }],
+
+        "outbounds": [outbound],
+
+        "route": {
+            "final": "tested-proxy"
+        },
+    }
+
+    with tempfile.TemporaryDirectory(
+        prefix="cat-vpn-check-"
+    ) as tmp:
+
+        config_path = Path(tmp) / "config.json"
+
+        config_path.write_text(
+            json.dumps(config),
+            encoding="utf-8"
+        )
+
+        checked = subprocess.run(
+            [
+                SING_BOX,
+                "check",
+                "-c",
+                str(config_path)
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+
+        if checked.returncode != 0:
+            print("  sing-box rejected config")
+            return None
+
+        process = subprocess.Popen(
+            [
+                SING_BOX,
+                "run",
+                "-c",
+                str(config_path)
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+        try:
+            if not wait_for_port(process, port):
+                return None
+
+            successes = 0
+            latencies = []
+
+            for url in PROBE_URLS:
+                started = time.monotonic()
+
+                try:
+                    result = subprocess.run(
+                        [
+                            "curl",
+                            "--silent",
+                            "--show-error",
+                            "--location",
+                            "--connect-timeout",
+                            "4",
+                            "--max-time",
+                            str(PROBE_TIMEOUT),
+                            "--proxy",
+                            f"socks5h://127.0.0.1:{port}",
+                            "--output",
+                            "/dev/null",
+                            "--write-out",
+                            "%{http_code}",
+                            url,
+                        ],
+                        capture_output=True,
+                        text=True,
+                        timeout=PROBE_TIMEOUT + 2,
+                    )
+
+                    status = result.stdout.strip()
+
+                    if (
+                        result.returncode == 0
+                        and status.startswith("2")
+                    ):
+                        successes += 1
+                        latencies.append(
+                            time.monotonic() - started
+                        )
+
+                except (
+                    subprocess.TimeoutExpired,
+                    OSError
+                ):
+                    pass
+
+            if successes >= 3:
+                return sum(latencies) / len(latencies)
+
+            return None
+
+        finally:
+            process.terminate()
+
+            try:
+                process.wait(timeout=2)
+
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=2)
+
+
+def get_five_working(source):
+    candidates = fetch_source(source)
+
+    if source["reject_russian_flag"]:
+        candidates = [
+            item for item in candidates
+            if "🇷🇺" not in urllib.parse.unquote(
+                html.unescape(item)
+            )
+        ]
+
+    tested = 0
+    passed = []
+    seen = set()
+
+    for uri in candidates:
+        if uri in seen:
             continue
 
-        # Убираем дубликаты
-        if line in seen:
+        seen.add(uri)
+
+        outbound = make_singbox_outbound(uri)
+
+        if outbound is None:
             continue
 
-        seen.add(line)
+        tested += 1
 
-        if scheme == "vless":
-            vless.append(line)
+        if tested > MAX_CANDIDATES_TO_TEST_PER_SOURCE:
+            break
+
+        print(
+            f"{source['name']}: "
+            f"testing candidate {tested}/"
+            f"{MAX_CANDIDATES_TO_TEST_PER_SOURCE}"
+        )
+
+        latency = probe_through_singbox(outbound)
+
+        if latency is not None:
+            print(f"  PASS ({latency:.2f}s)")
+            passed.append((latency, uri))
         else:
-            hysteria.append(line)
+            print("  FAIL")
 
-    return vless, hysteria
+    passed.sort(key=lambda item: item[0])
 
+    selected = [
+        uri for _, uri in passed[:PER_SOURCE_LIMIT]
+    ]
 
-def select_configs(vless, hysteria):
-    selected = []
-
-    # Стараемся распределить 10 конфигов
-    # между двумя протоколами поровну.
-    quota = MAX_CONFIGS // 2
-
-    for i in range(quota):
-        if i < len(vless):
-            selected.append(vless[i])
-
-        if i < len(hysteria):
-            selected.append(hysteria[i])
-
-    # Если одного протокола мало,
-    # добираем конфиги из другого.
-    if len(selected) < MAX_CONFIGS:
-        remaining = (
-            vless[quota:] +
-            hysteria[quota:]
+    if len(selected) < PER_SOURCE_LIMIT:
+        raise RuntimeError(
+            f"{source['name']}: only {len(selected)} "
+            f"stable configs passed; need {PER_SOURCE_LIMIT}. "
+            "Existing cat.txt will be kept."
         )
 
-        selected.extend(
-            remaining[:MAX_CONFIGS - len(selected)]
-        )
+    print(
+        f"{source['name']}: selected "
+        f"{len(selected)} configs from {tested} tested"
+    )
 
     return selected
 
 
-def save_subscription(configs):
-    if not configs:
-        raise RuntimeError(
-            "No VLESS or Hysteria configs found!"
-        )
-
-    with open(
-        OUTPUT_FILE,
-        "w",
-        encoding="utf-8"
-    ) as file:
-
-        file.write(HEADER)
-        file.write("\n".join(configs))
-        file.write("\n")
-
-    print(f"Saved {len(configs)} configs!")
-
-    print(
-        "VLESS:",
-        sum(c.startswith("vless://") for c in configs)
-    )
-
-    print(
-        "Hysteria:",
-        sum(
-            c.startswith((
-                "hy2://",
-                "hysteria2://",
-                "hysteria://"
-            ))
-            for c in configs
-        )
-    )
-
-
 def main():
-    print("Downloading subscription...")
+    all_configs = []
 
-    data = download_subscription()
+    for source in SOURCES:
+        selected = get_five_working(source)
+        all_configs.extend(selected)
 
-    vless, hysteria = get_configs(data)
+    if len(all_configs) != 10:
+        raise RuntimeError(
+            "Expected exactly 10 configs; "
+            "refusing to overwrite cat.txt"
+        )
 
-    print(f"Found VLESS: {len(vless)}")
-    print(f"Found Hysteria: {len(hysteria)}")
+    content = HEADER + "\n".join(all_configs) + "\n"
 
-    configs = select_configs(vless, hysteria)
+    OUTPUT_FILE.write_text(
+        content,
+        encoding="utf-8"
+    )
 
-    save_subscription(configs)
+    print(
+        f"Done: wrote {len(all_configs)} configs to {OUTPUT_FILE}"
+    )
 
 
 if __name__ == "__main__":
