@@ -19,7 +19,7 @@ from pathlib import Path
 SOURCES = [
     {
         "name": "fixnet",
-        "url": "https://gidroksi.fun/sub/ed20ce6d",
+        "url": "https://raw.githubusercontent.com/HalyavusVPNUS/cat-wife-vpn/refs/heads/main/Fixnet.gg",
         "reject_russian_flag": False,
         "fill_unverified": False,   # непроверенные не добираем: нужны только стабильные
         "limit": 10,                # конфигов в JSON
