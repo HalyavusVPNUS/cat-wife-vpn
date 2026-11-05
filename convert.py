@@ -19,7 +19,7 @@ from pathlib import Path
 SOURCES = [
     {
         "name": "fixnet",
-        "url": "https://pozor.bond/sub/aa9ee514071e4d70b304",
+        "url": "https://raw.githubusercontent.com/HalyavusVPNUS/cat-wife-vpn/refs/heads/main/Fixnet.gg",
         "reject_russian_flag": False,
         # xhttp-конфиги sing-box проверить не может, поэтому берём их без проверки
         # (при открытом TCP-порте). Выбор рабочего делает balancer в Happ.
