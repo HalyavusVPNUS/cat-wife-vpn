@@ -43,8 +43,8 @@ SOURCES = [
         "fill_unverified": True,
     },
     {
-        "name": "Unlisted",
-        "url": "https://clck.ly/3WnEfT",
+        "name": "Nova",
+        "url": "https://gitverse.ru/api/repos/SlavaKat/FreeProxyNova/raw/branch/master/%F0%9F%86%93ProxyNova%20%E2%9D%AF%20%F0%9F%97%BD%F0%9F%95%8A%E2%9C%8A%20%D0%A0%D1%83%D1%87%D0%BD%D0%BE%D0%B9%20%D0%B2%D1%8B%D0%B1%D0%BE%D1%80",
         "reject_russian_flag": False,
         "fill_unverified": True,
         "limit": 20,               # используется только если UNLIMITED = False
