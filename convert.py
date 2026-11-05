@@ -18,11 +18,16 @@ from pathlib import Path
 
 SOURCES = [
     {
-        "name": "vlessforu",
-        "url": "https://sub.vlessfo.ru/vlessforu/working_configs.txt",
-        "reject_russian_flag": True,
+        "name": "fixnet",
+        "url": "https://pozor.bond/sub/aa9ee514071e4d70b304",
+        "reject_russian_flag": False,
         "fill_unverified": False,   # непроверенные не добираем: нужны только стабильные
-        "limit": 15,                # конфигов в JSON
+        "limit": 10,                # конфигов в JSON
+        # только Латвия и Швеция (по флагу или названию страны в имени конфига)
+        "allowed_countries": [
+            "🇱🇻", "latvia", "латвия", "латвии",
+            "🇸🇪", "sweden", "швеция", "швеции",
+        ],
     },
 ]
 
@@ -35,7 +40,7 @@ UNLIMITED = False
 # В режиме UNLIMITED: добавлять ли конфиги, которые sing-box проверить не может (xhttp и т.п.)
 INCLUDE_UNTESTABLE = False
 
-PER_SOURCE_LIMIT = 15          # если у источника нет своего "limit"
+PER_SOURCE_LIMIT = 10          # если у источника нет своего "limit"
 # сколько кандидатов тестировать на источник (None = все)
 MAX_CANDIDATES_TO_TEST_PER_SOURCE = None
 SOURCE_TIME_BUDGET = 1500                 # сек на один источник (защита от долгого job)
