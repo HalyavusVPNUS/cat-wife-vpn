@@ -11,15 +11,23 @@ import sys
 import tempfile
 import threading
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+# HWID «устройства» для панели подписок. Держи его постоянным:
+# если на подписке есть лимит устройств, каждый новый HWID занимает слот.
+SUB_HWID = os.environ.get("SUB_HWID", "9f3c2a7e5b1d4c86a0e2f7b3d1c58a94")
+
 SOURCES = [
     {
         "name": "fixcord",
-        "url": "https://admin.fixcord.gg/happ/PoR50fDqHKFF6CqibsaELhKozHTUtMyRoH_4RLVYuog/subscription",
+        "url": os.environ.get(
+            "SUB_URL",
+            "https://admin.fixcord.gg/happ/PoR50fDqHKFF6CqibsaELhKozHTUtMyRoH_4RLVYuog/subscription",
+        ),
         "reject_russian_flag": False,
         "fill_unverified": False,   # непроверенные не добираем: нужны только стабильные
         "limit": 2,                 # конфигов в JSON
@@ -84,11 +92,21 @@ GEO_BUCKET_MS = 25   # конфиги в пределах 25 мс считаем
 URI_RE = re.compile(r"""(?i)(?:vless|hysteria2|hy2)://[^\s<>"'`]+""")
 
 USER_AGENTS = [
+    "Happ/3.0.0",
     "sing-box/1.14.4",
     "v2rayN/7.0",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36",
-    "Happ/3.0.0",
 ]
+
+# заголовки «устройства»: панели подписок (Remnawave и т.п.) часто
+# отвечают 400, если их нет
+DEVICE_HEADERS = {
+    "x-hwid": SUB_HWID,
+    "x-device-os": "Android",
+    "x-ver-os": "14",
+    "x-device-model": "Pixel 8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
 
 PROBE_URLS = [
     "https://www.gstatic.com/generate_204",
@@ -161,14 +179,14 @@ def fetch_source(source):
     errors = []
 
     for user_agent in USER_AGENTS:
-        request = urllib.request.Request(
-            source["url"],
-            headers={
-                "User-Agent": user_agent,
-                "Accept": "text/plain, */*",
-                "Cache-Control": "no-cache",
-            },
-        )
+        headers = {
+            "User-Agent": user_agent,
+            "Accept": "text/plain, */*",
+            "Cache-Control": "no-cache",
+        }
+        headers.update(DEVICE_HEADERS)
+
+        request = urllib.request.Request(source["url"], headers=headers)
 
         try:
             with urllib.request.urlopen(request, timeout=35) as response:
@@ -179,10 +197,20 @@ def fetch_source(source):
             uris = extract_uris(body)
 
             if uris:
-                print(f"{source['name']}: extracted {len(uris)} links")
+                print(f"{source['name']}: extracted {len(uris)} links (UA {user_agent})")
                 return uris
 
-            errors.append(f"{user_agent}: no supported links in response")
+            errors.append(
+                f"{user_agent}: no supported links in response "
+                f"(starts with: {tail(body, 120)!r})"
+            )
+
+        except urllib.error.HTTPError as exc:
+            try:
+                err_body = exc.read(500).decode("utf-8", errors="replace")
+            except Exception:
+                err_body = ""
+            errors.append(f"{user_agent}: HTTP {exc.code}, body: {tail(err_body, 200)!r}")
 
         except Exception as exc:
             errors.append(f"{user_agent}: {exc}")
