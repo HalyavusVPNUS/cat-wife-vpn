@@ -44,7 +44,7 @@ SOURCES = [
     },
     {
         "name": "pozor",
-        "url": "https://pozor.bond/sub/5e7o7i6frwqw",
+        "url": "https://pozor.bond/sub/r7",
         "reject_russian_flag": False,
         "fill_unverified": True,
         "limit": 15,               # конфигов в этом JSON
