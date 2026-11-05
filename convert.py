@@ -47,7 +47,7 @@ SOURCES = [
         "url": "https://pozor.bond/sub/r7",
         "reject_russian_flag": False,
         "fill_unverified": True,
-        "limit": 15,               # конфигов в этом JSON
+        "limit": 15,               # используется только если UNLIMITED = False
         "allow_hysteria": True,    # vless + hysteria2
     },
     {
@@ -55,7 +55,7 @@ SOURCES = [
         "url": "https://raw.githubusercontent.com/Buffetbarko/Universal-Proxy-Config-Parser-/main/blacklist_vpn.txt",
         "reject_russian_flag": False,
         "fill_unverified": True,
-        "limit": 17,               # конфигов в этом JSON
+        "limit": 17,               # используется только если UNLIMITED = False
         # только эти страны (по эмодзи-флагу в названии конфига):
         # Польша, Германия, Нидерланды, Австрия, Франция, Испания, Сербия
         "allowed_countries": [
@@ -67,10 +67,17 @@ SOURCES = [
 OUTPUT_FILE = Path("cat.txt")
 SING_BOX = os.environ.get("SING_BOX", "sing-box")
 
-PER_SOURCE_LIMIT = 10          # конфигов в одном JSON (если у источника нет своего "limit")
-MAX_CANDIDATES_TO_TEST_PER_SOURCE = 200   # тестируем почти всё, чтобы найти лучший пинг
+# True  = в каждый JSON идут ВСЕ рабочие (прошедшие проверку) конфиги, без лимитов.
+# False = лимиты: у источника свой "limit", иначе PER_SOURCE_LIMIT, плюс добор непроверенными.
+UNLIMITED = True
+# В режиме UNLIMITED: добавлять ли конфиги, которые sing-box проверить не может (xhttp и т.п.)
+INCLUDE_UNTESTABLE = True
+
+PER_SOURCE_LIMIT = 10          # конфигов в одном JSON (если нет своего "limit" и UNLIMITED = False)
+# сколько кандидатов тестировать на источник (None = все)
+MAX_CANDIDATES_TO_TEST_PER_SOURCE = None
 SOURCE_TIME_BUDGET = 780                  # сек на один источник (защита от долгого job)
-WORKERS = 4                    # параллельных проверок
+WORKERS = 8                    # параллельных проверок
 SOCKS_STARTUP_TIMEOUT = 8
 PROBE_TIMEOUT = 10
 MIN_SUCCESSES = 1              # достаточно одного ответа через прокси (туннель жив)
@@ -1009,7 +1016,12 @@ def uri_endpoint(uri):
 
 
 def get_working(source):
-    limit = source.get("limit", PER_SOURCE_LIMIT)
+    # None = без ограничений
+    if UNLIMITED:
+        limit = None
+    else:
+        limit = source.get("limit", PER_SOURCE_LIMIT)
+
     allow_hysteria = source.get("allow_hysteria", False)
 
     candidates = fetch_source(source)
@@ -1062,7 +1074,10 @@ def get_working(source):
 
         jobs.append((len(jobs) + 1, uri, outbound))
 
-        if len(jobs) >= MAX_CANDIDATES_TO_TEST_PER_SOURCE:
+        if (
+            MAX_CANDIDATES_TO_TEST_PER_SOURCE is not None
+            and len(jobs) >= MAX_CANDIDATES_TO_TEST_PER_SOURCE
+        ):
             break
 
     testable = [j for j in jobs if j[2] is not None]
@@ -1077,6 +1092,7 @@ def get_working(source):
     failed = []
     closed = set()
     reasons = {}
+    skipped_by_time = 0
     deadline = time.monotonic() + SOURCE_TIME_BUDGET
 
     # случайный порядок, чтобы лимит по времени не резал одни и те же конфиги
@@ -1112,6 +1128,7 @@ def get_working(source):
             index, uri, latency, reason = future.result()
 
             if reason == "skipped":
+                skipped_by_time += 1
                 continue
 
             if latency is not None:
@@ -1127,6 +1144,12 @@ def get_working(source):
                 kind = reason.split(":")[0][:30]
                 reasons[kind] = reasons.get(kind, 0) + 1
 
+    if skipped_by_time:
+        print(
+            f"WARNING: {source['name']}: {skipped_by_time} configs not checked "
+            f"(SOURCE_TIME_BUDGET={SOURCE_TIME_BUDGET}s exceeded)"
+        )
+
     # ранжируем по близости к аудитории, а не по пингу с раннера (он из США)
     geo = geolocate({uri_endpoint(uri)[0] for _, uri in passed})
     passed.sort(key=lambda item: geo_key(item[1], geo, item[0]))
@@ -1136,7 +1159,8 @@ def get_working(source):
         print(f"{source['name']}: failure reasons -> {summary}")
 
     print(f"{source['name']}: {len(passed)} passed, best pings:")
-    for latency, uri in passed[:limit + 3]:
+    top_n = 10 if limit is None else limit + 3
+    for latency, uri in passed[:top_n]:
         host, _ = uri_endpoint(uri)
         est, country = estimate_ping_ms(host, geo)
         print(
@@ -1144,8 +1168,28 @@ def get_working(source):
             f"runner {latency:.2f}s  {host}"
         )
 
-    selected = [uri for _, uri in passed[:limit]]
+    if limit is None:
+        selected = [uri for _, uri in passed]
+    else:
+        selected = [uri for _, uri in passed[:limit]]
+
     verified = len(selected)
+
+    # режим без лимитов: берём только реально проработавшие конфиги.
+    # Непроверяемые (xhttp и т.п.) добавляются лишь по флагу INCLUDE_UNTESTABLE.
+    if limit is None:
+        if INCLUDE_UNTESTABLE:
+            for index, uri, _ in untestable:
+                host, port = uri_endpoint(uri)
+                if tcp_open(host, port):
+                    print(f"{source['name']} #{index}: UNTESTABLE (tcp open, added)")
+                    selected.append(uri)
+
+        print(
+            f"{source['name']}: selected {len(selected)} configs "
+            f"({verified} verified, {len(selected) - verified} unverified)"
+        )
+        return selected
 
     # добираем непроверенными, если проверенных мало: берём серверы с
     # открытым портом, самые быстрые по TCP-отклику идут первыми
