@@ -21,79 +21,51 @@ SOURCES = [
         "name": "vlessforu",
         "url": "https://sub.vlessfo.ru/vlessforu/working_configs.txt",
         "reject_russian_flag": True,
-        "fill_unverified": True,
-    },
-    {
-        "name": "happcluchi",
-        "url": "https://freevpn.happcluchi.workers.dev",
-        "reject_russian_flag": False,
-        "fill_unverified": True,
-        # берём только конфиги, в названии которых есть один из маркеров
-        # (🇪🇺 Европа, 🇸🇪 Швеция, 🇳🇱 Нидерланды)
-        "allowed_countries": [
-            "🇪🇺", "europe", "европа",
-            "🇸🇪", "sweden", "швеция",
-            "🇳🇱", "netherlands", "нидерланды", "голландия",
-        ],
-    },
-    {
-        "name": "gidroksi",
-        "url": "https://gidroksi.fun/free",
-        "reject_russian_flag": False,
-        "fill_unverified": True,
-    },
-    {
-        "name": "Nova",
-        "url": "https://gitverse.ru/api/repos/SlavaKat/FreeProxyNova/raw/branch/master/%F0%9F%86%93ProxyNova%20%E2%9D%AF%20%F0%9F%97%BD%F0%9F%95%8A%E2%9C%8A%20%D0%A0%D1%83%D1%87%D0%BD%D0%BE%D0%B9%20%D0%B2%D1%8B%D0%B1%D0%BE%D1%80",
-        "reject_russian_flag": False,
-        "fill_unverified": True,
-        "limit": 20,               # используется только если UNLIMITED = False
-        "allow_hysteria": True,    # vless + hysteria2
-    },
-    {
-        "name": "buffetbarko",
-        "url": "https://raw.githubusercontent.com/Buffetbarko/Universal-Proxy-Config-Parser-/main/blacklist_vpn.txt",
-        "reject_russian_flag": False,
-        "fill_unverified": True,
-        "limit": 17,               # используется только если UNLIMITED = False
-        # только эти страны (по эмодзи-флагу в названии конфига):
-        # Польша, Германия, Нидерланды, Австрия, Франция, Испания, Сербия
-        "allowed_countries": [
-            "🇵🇱", "🇩🇪", "🇳🇱", "🇦🇹", "🇫🇷", "🇪🇸", "🇷🇸",
-        ],
+        "fill_unverified": False,   # непроверенные не добираем: нужны только стабильные
+        "limit": 15,                # конфигов в JSON
     },
 ]
 
 OUTPUT_FILE = Path("cat.txt")
 SING_BOX = os.environ.get("SING_BOX", "sing-box")
 
-# True  = в каждый JSON идут ВСЕ рабочие (прошедшие проверку) конфиги, без лимитов.
-# False = лимиты: у источника свой "limit", иначе PER_SOURCE_LIMIT, плюс добор непроверенными.
-UNLIMITED = True
+# True  = в JSON идут все стабильные конфиги, без лимита.
+# False = лимит источника ("limit"), берутся самые стабильные.
+UNLIMITED = False
 # В режиме UNLIMITED: добавлять ли конфиги, которые sing-box проверить не может (xhttp и т.п.)
-INCLUDE_UNTESTABLE = True
+INCLUDE_UNTESTABLE = False
 
-PER_SOURCE_LIMIT = 10          # конфигов в одном JSON (если нет своего "limit" и UNLIMITED = False)
+PER_SOURCE_LIMIT = 15          # если у источника нет своего "limit"
 # сколько кандидатов тестировать на источник (None = все)
 MAX_CANDIDATES_TO_TEST_PER_SOURCE = None
-SOURCE_TIME_BUDGET = 780                  # сек на один источник (защита от долгого job)
+SOURCE_TIME_BUDGET = 1500                 # сек на один источник (защита от долгого job)
 WORKERS = 8                    # параллельных проверок
 SOCKS_STARTUP_TIMEOUT = 8
 PROBE_TIMEOUT = 10
-MIN_SUCCESSES = 1              # достаточно одного ответа через прокси (туннель жив)
+MIN_SUCCESSES = 1              # первичная проверка: хотя бы один ответ через прокси
 MIN_TOTAL_TO_WRITE = 1         # минимум профилей, чтобы перезаписать cat.txt
 
+# --- Проверка стабильности ------------------------------------------------
+# Конфиг не просто «ответил раз», а несколько раундов подряд с паузами,
+# и по HTTP, и по HTTPS (HTTPS ловит конфиги, где туннель живой, но TLS через него рвётся).
+STABILITY_ROUNDS = 6           # раундов проверки
+STABILITY_PAUSE = 1.5          # пауза между раундами, сек
+MIN_STABILITY = 0.75           # доля успешных запросов, ниже которой конфиг отбрасывается
+STABILITY_URLS = [
+    "http://cp.cloudflare.com/generate_204",
+    "https://www.gstatic.com/generate_204",
+]
+
 # --- JSON-режим для Happ -------------------------------------------------
-# Один JSON на источник, внутри все его конфиги + автовыбор лучшего по пингу.
 # cat.txt = ЧИСТЫЙ JSON (без #-заголовков, иначе Happ пишет "no server link").
-# Название профиля отдаётся HTTP-заголовком через worker.js.
+# Название подписки отдаётся HTTP-заголовком через worker.js.
 BALANCER_PROBE_URL = "https://www.gstatic.com/generate_204"
 BALANCER_PROBE_INTERVAL = "1m"
 PROFILE_TITLE = "Кошка жена ВПН 🐈"
 
 # Откуда считаем «близко»: где живёт аудитория подписки (по умолчанию Москва).
 # Пинг с раннера GitHub (США) для пользователей не показателен, поэтому
-# рабочие конфиги ранжируются по расстоянию до этой точки.
+# при равной стабильности конфиги ранжируются по расстоянию до этой точки.
 REFERENCE_LOCATION = (
     float(os.environ.get("REF_LAT", "55.75")),
     float(os.environ.get("REF_LON", "37.62")),
@@ -591,7 +563,7 @@ def make_xray_outbound(uri, tag, allow_hysteria=False):
 
 
 def build_happ_json(source_name, uris, allow_hysteria=False):
-    """Один xray-JSON на источник: все конфиги + автовыбор по пингу."""
+    """Один xray-JSON: все конфиги + автовыбор по пингу."""
     proxies = []
 
     for uri in uris:
@@ -605,7 +577,7 @@ def build_happ_json(source_name, uris, allow_hysteria=False):
         return None
 
     config = {
-        "remarks": f"{PROFILE_TITLE} · Авто {source_name} ({len(proxies)})",
+        "remarks": PROFILE_TITLE,
         "log": {"loglevel": "warning"},
         "dns": {"servers": ["1.1.1.1", "8.8.8.8"], "queryStrategy": "UseIP"},
         "inbounds": [
@@ -727,19 +699,20 @@ def tail(text, limit=200):
     return text[-limit:]
 
 
-LATENCY_URLS = [
-    "http://cp.cloudflare.com/generate_204",
-    "http://www.gstatic.com/generate_204",
-]
-LATENCY_ROUNDS = 3
-
-
-def measure_latency(port, fallback_samples):
-    """Честный пинг: обычный HTTP без TLS, несколько замеров, медиана."""
+def measure_stability(port):
+    """Несколько раундов с паузами, HTTP + HTTPS.
+    Возвращает (доля успешных запросов, медианная задержка | None).
+    Выходит раньше, если стабильность уже не набрать."""
+    total = STABILITY_ROUNDS * len(STABILITY_URLS)
+    max_failures = int(total * (1 - MIN_STABILITY))
+    failures = 0
     samples = []
 
-    for _ in range(LATENCY_ROUNDS):
-        for url in LATENCY_URLS:
+    for round_index in range(STABILITY_ROUNDS):
+        if round_index:
+            time.sleep(STABILITY_PAUSE)
+
+        for url in STABILITY_URLS:
             try:
                 result = subprocess.run(
                     [
@@ -757,23 +730,31 @@ def measure_latency(port, fallback_samples):
                     timeout=11,
                 )
 
-                code, _, total = result.stdout.strip().partition("|")
+                code, _, elapsed = result.stdout.strip().partition("|")
 
                 if result.returncode == 0 and ok_status(code):
-                    samples.append(float(total))
+                    samples.append(float(elapsed))
+                    continue
 
             except (subprocess.TimeoutExpired, OSError, ValueError):
                 pass
 
-    if len(samples) >= 2:
-        samples.sort()
-        return samples[len(samples) // 2]
+            failures += 1
 
-    return min(fallback_samples)
+            if failures > max_failures:
+                return (total - failures) / total, None
+
+    ratio = len(samples) / total
+
+    if not samples:
+        return 0.0, None
+
+    samples.sort()
+    return ratio, samples[len(samples) // 2]
 
 
 def probe_through_singbox(outbound):
-    """Возвращает (latency | None, причина)."""
+    """Возвращает ((latency, stability) | None, причина)."""
     port = free_local_port()
 
     try:
@@ -824,12 +805,9 @@ def probe_through_singbox(outbound):
                         return None, f"sing-box didn't start: {tail(log)}"
 
                     successes = 0
-                    latencies = []
                     last_error = ""
 
                     for url in PROBE_URLS:
-                        started = time.monotonic()
-
                         try:
                             result = subprocess.run(
                                 [
@@ -853,7 +831,6 @@ def probe_through_singbox(outbound):
 
                             if result.returncode == 0 and ok_status(status):
                                 successes += 1
-                                latencies.append(time.monotonic() - started)
                             else:
                                 last_error = (
                                     f"curl rc={result.returncode} "
@@ -866,11 +843,17 @@ def probe_through_singbox(outbound):
                         if successes >= MIN_SUCCESSES:
                             break
 
-                    if successes >= MIN_SUCCESSES:
-                        return measure_latency(port, latencies), "ok"
+                    if successes < MIN_SUCCESSES:
+                        log = log_path.read_text(errors="replace")
+                        return None, f"{last_error} | sing-box: {tail(log, 300)}"
 
-                    log = log_path.read_text(errors="replace")
-                    return None, f"{last_error} | sing-box: {tail(log, 300)}"
+                    # туннель ответил: теперь проверяем, насколько он стабилен
+                    ratio, latency = measure_stability(port)
+
+                    if latency is None or ratio < MIN_STABILITY:
+                        return None, f"unstable: {ratio:.0%} of requests ok"
+
+                    return (latency, ratio), "ok"
 
                 finally:
                     if process.poll() is None:
@@ -948,10 +931,10 @@ def estimate_ping_ms(host, geo):
     return 10 + km / 60, info[2]
 
 
-def geo_key(uri, geo, tiebreak):
+def geo_bucket(uri, geo):
     host, _ = uri_endpoint(uri)
     est, _ = estimate_ping_ms(host, geo)
-    return (round(est / GEO_BUCKET_MS), tiebreak)
+    return round(est / GEO_BUCKET_MS)
 
 
 # ---------------------------------------------------------- selection
@@ -1088,7 +1071,7 @@ def get_working(source):
         f"{len(untestable)} untestable (xhttp etc.)"
     )
 
-    passed = []
+    passed = []        # (latency, uri, stability)
     failed = []
     closed = set()
     reasons = {}
@@ -1109,14 +1092,19 @@ def get_working(source):
         ):
             return index, uri, None, "tcp port closed"
 
-        latency, reason = probe_through_singbox(outbound)
+        result, reason = probe_through_singbox(outbound)
 
         # второй заход: бесплатные узлы часто отвечают не с первого раза
-        if latency is None and not reason.startswith("config rejected"):
+        # (нестабильные конфиги повторно не проверяем: они и так отсеяны)
+        if (
+            result is None
+            and not reason.startswith("config rejected")
+            and not reason.startswith("unstable")
+        ):
             time.sleep(1)
-            latency, reason = probe_through_singbox(outbound)
+            result, reason = probe_through_singbox(outbound)
 
-        return index, uri, latency, reason
+        return index, uri, result, reason
 
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
         futures = [
@@ -1125,15 +1113,19 @@ def get_working(source):
         ]
 
         for future in as_completed(futures):
-            index, uri, latency, reason = future.result()
+            index, uri, result, reason = future.result()
 
             if reason == "skipped":
                 skipped_by_time += 1
                 continue
 
-            if latency is not None:
-                print(f"{source['name']} #{index}: PASS ({latency:.2f}s)")
-                passed.append((latency, uri))
+            if result is not None:
+                latency, stability = result
+                print(
+                    f"{source['name']} #{index}: PASS "
+                    f"({latency:.2f}s, stable {stability:.0%})"
+                )
+                passed.append((latency, uri, stability))
             else:
                 print(f"{source['name']} #{index}: FAIL - {reason}")
                 failed.append((index, uri))
@@ -1150,32 +1142,39 @@ def get_working(source):
             f"(SOURCE_TIME_BUDGET={SOURCE_TIME_BUDGET}s exceeded)"
         )
 
-    # ранжируем по близости к аудитории, а не по пингу с раннера (он из США)
-    geo = geolocate({uri_endpoint(uri)[0] for _, uri in passed})
-    passed.sort(key=lambda item: geo_key(item[1], geo, item[0]))
+    # сначала самые стабильные, потом ближайшие к аудитории, потом по замеру
+    # (пинг с раннера из США для пользователей не показателен)
+    geo = geolocate({uri_endpoint(uri)[0] for _, uri, _ in passed})
+    passed.sort(
+        key=lambda item: (
+            -round(item[2], 2),
+            geo_bucket(item[1], geo),
+            item[0],
+        )
+    )
 
     if reasons:
         summary = ", ".join(f"{k}: {v}" for k, v in sorted(reasons.items()))
         print(f"{source['name']}: failure reasons -> {summary}")
 
-    print(f"{source['name']}: {len(passed)} passed, best pings:")
+    print(f"{source['name']}: {len(passed)} stable, best:")
     top_n = 10 if limit is None else limit + 3
-    for latency, uri in passed[:top_n]:
+    for latency, uri, stability in passed[:top_n]:
         host, _ = uri_endpoint(uri)
         est, country = estimate_ping_ms(host, geo)
         print(
-            f"    ~{est:.0f} ms from audience ({country}), "
+            f"    stable {stability:.0%}, ~{est:.0f} ms from audience ({country}), "
             f"runner {latency:.2f}s  {host}"
         )
 
     if limit is None:
-        selected = [uri for _, uri in passed]
+        selected = [uri for _, uri, _ in passed]
     else:
-        selected = [uri for _, uri in passed[:limit]]
+        selected = [uri for _, uri, _ in passed[:limit]]
 
     verified = len(selected)
 
-    # режим без лимитов: берём только реально проработавшие конфиги.
+    # режим без лимитов: только прошедшие проверку.
     # Непроверяемые (xhttp и т.п.) добавляются лишь по флагу INCLUDE_UNTESTABLE.
     if limit is None:
         if INCLUDE_UNTESTABLE:
@@ -1191,8 +1190,8 @@ def get_working(source):
         )
         return selected
 
-    # добираем непроверенными, если проверенных мало: берём серверы с
-    # открытым портом, самые быстрые по TCP-отклику идут первыми
+    # добираем непроверенными, только если источник это разрешает
+    # (для стабильной подписки fill_unverified лучше держать выключенным)
     if source.get("fill_unverified") and len(selected) < limit:
         pool_unverified = [
             (index, uri) for index, uri in failed if index not in closed
@@ -1216,7 +1215,9 @@ def get_working(source):
                     ranked.append((rtt, item))
 
         geo_fill = geolocate({uri_endpoint(item[1])[0] for _, item in ranked})
-        ranked.sort(key=lambda entry: geo_key(entry[1][1], geo_fill, entry[0]))
+        ranked.sort(
+            key=lambda entry: (geo_bucket(entry[1][1], geo_fill), entry[0])
+        )
 
         for rtt, (index, uri) in ranked:
             if len(selected) >= limit:
