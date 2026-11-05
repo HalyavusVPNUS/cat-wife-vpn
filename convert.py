@@ -31,6 +31,17 @@ SOURCES = [
             "🇸🇪", "sweden", "швеция", "швеции",
         ],
     },
+    {
+        "name": "hysteria",
+        "url": "https://raw.githubusercontent.com/HalyavusVPNUS/vless-subscription/refs/heads/main/hysteria.txt",
+        "reject_russian_flag": False,
+        # в файле hysteria2-ссылки, поэтому разрешаем hy2 (нужен свежий xray-core в Happ)
+        "allow_hysteria": True,
+        # hy2 работает по UDP, TCP-добор не показателен
+        "fill_unverified": False,
+        "limit": 5,                 # конфигов в JSON
+        # без фильтра по странам: берём все
+    },
 ]
 
 OUTPUT_FILE = Path("cat.txt")
@@ -594,7 +605,7 @@ def make_xray_outbound(uri, tag, allow_hysteria=False):
     }
 
 
-def build_happ_json(source_name, uris, allow_hysteria=False):
+def build_happ_json(source_name, uris, allow_hysteria=False, title=None):
     """Один xray-JSON: все конфиги + автовыбор по пингу."""
     proxies = []
 
@@ -609,7 +620,7 @@ def build_happ_json(source_name, uris, allow_hysteria=False):
         return None
 
     config = {
-        "remarks": PROFILE_TITLE,
+        "remarks": title or PROFILE_TITLE,
         "log": {"loglevel": "warning"},
         "dns": {"servers": ["1.1.1.1", "8.8.8.8"], "queryStrategy": "UseIP"},
         "inbounds": [
@@ -1330,7 +1341,10 @@ def main():
             continue
 
         profile = build_happ_json(
-            source["name"], uris, source.get("allow_hysteria", False)
+            source["name"],
+            uris,
+            source.get("allow_hysteria", False),
+            source.get("title"),
         )
 
         if profile is None:
