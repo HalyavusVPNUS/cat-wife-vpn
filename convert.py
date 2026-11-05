@@ -36,6 +36,8 @@ SOURCES = [
             "riga",
             "рига",
         ],
+        # если в названии нет страны, определяем её по IP сервера
+        "allowed_country_codes": ["SE", "LV"],
     },
 ]
 
@@ -1037,12 +1039,37 @@ def get_working(source):
         ]
 
     allowed = source.get("allowed_countries")
+    allowed_codes = {c.upper() for c in source.get("allowed_country_codes", [])}
 
-    if allowed:
+    if allowed or allowed_codes:
         before = len(candidates)
-        candidates = [
-            item for item in candidates if matches_country(item, allowed)
-        ]
+
+        # страна по IP сервера (на случай, если в названии конфига её нет)
+        ip_geo = {}
+        if allowed_codes:
+            ip_geo = geolocate({uri_endpoint(item)[0] for item in candidates})
+
+        kept = []
+
+        for item in candidates:
+            host, _ = uri_endpoint(item)
+            code = ip_geo.get(host, (0, 0, "??"))[2].upper()
+            by_name = bool(allowed) and matches_country(item, allowed)
+            by_ip = code in allowed_codes
+            keep = by_name or by_ip
+
+            title = urllib.parse.unquote(
+                html.unescape(urllib.parse.urlsplit(item).fragment)
+            )
+            print(
+                f"  [{'KEEP' if keep else 'drop'}] name={title[:40]!r} "
+                f"host={host} ip-country={code}"
+            )
+
+            if keep:
+                kept.append(item)
+
+        candidates = kept
         print(
             f"{source['name']}: country filter kept "
             f"{len(candidates)} of {before} links"
