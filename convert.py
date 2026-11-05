@@ -19,7 +19,7 @@ from pathlib import Path
 SOURCES = [
     {
         "name": "fixnet",
-        "url": "https://pozor.bond/sub/aa9ee514071e4d70b304",
+        "url": "https://gidroksi.fun/sub/ed20ce6d",
         "reject_russian_flag": False,
         "fill_unverified": False,   # непроверенные не добираем: нужны только стабильные
         "limit": 10,                # конфигов в JSON
