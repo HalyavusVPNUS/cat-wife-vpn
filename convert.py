@@ -18,11 +18,24 @@ from pathlib import Path
 
 SOURCES = [
     {
-        "name": "vlessforu",
-        "url": "https://sub.vlessfo.ru/vlessforu/working_configs.txt",
+        "name": "pozor",
+        "url": "https://pozor.bond/sub/aa9ee514071e4d70b304",
         "reject_russian_flag": True,
         "fill_unverified": False,   # непроверенные не добираем: нужны только стабильные
-        "limit": 15,                # конфигов в JSON
+        "limit": 10,                # конфигов в JSON
+        # только Швеция и Латвия (ищем в названии конфига, т.е. в части после #)
+        "allowed_countries": [
+            "\U0001F1F8\U0001F1EA",   # флаг Швеции
+            "\U0001F1F1\U0001F1FB",   # флаг Латвии
+            "sweden",
+            "swedish",
+            "stockholm",
+            "швеци",
+            "латви",
+            "latvia",
+            "riga",
+            "рига",
+        ],
     },
 ]
 
