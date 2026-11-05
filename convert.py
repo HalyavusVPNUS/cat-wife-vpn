@@ -42,12 +42,20 @@ SOURCES = [
         "reject_russian_flag": False,
         "fill_unverified": True,
     },
+    {
+        "name": "pozor",
+        "url": "https://pozor.bond/sub/5e7o7i6frwqw",
+        "reject_russian_flag": False,
+        "fill_unverified": True,
+        "limit": 15,               # конфигов в этом JSON
+        "allow_hysteria": True,    # vless + hysteria2
+    },
 ]
 
 OUTPUT_FILE = Path("cat.txt")
 SING_BOX = os.environ.get("SING_BOX", "sing-box")
 
-PER_SOURCE_LIMIT = 10          # конфигов в одном JSON
+PER_SOURCE_LIMIT = 10          # конфигов в одном JSON (если у источника нет своего "limit")
 MAX_CANDIDATES_TO_TEST_PER_SOURCE = 200   # тестируем почти всё, чтобы найти лучший пинг
 SOURCE_TIME_BUDGET = 780                  # сек на один источник (защита от долгого job)
 WORKERS = 4                    # параллельных проверок
@@ -359,12 +367,66 @@ def make_singbox_outbound(uri):
 
 # ------------------------------------------------------- uri -> xray json
 
-def make_xray_outbound(uri, tag):
-    """vless:// -> outbound в формате xray (его понимает Happ).
-    Hysteria2 в xray-JSON не переносим: возвращаем None."""
-    parsed = urllib.parse.urlsplit(uri)
+def make_xray_hysteria_outbound(parsed, query, tag):
+    """hy2:// -> outbound xray (protocol hysteria, version 2).
+    Нужен свежий xray-core; в старых версиях Happ такой конфиг не заведётся."""
+    try:
+        server = parsed.hostname
+        port = parsed.port
+    except ValueError:
+        return None
 
-    if parsed.scheme.lower() != "vless":
+    username = urllib.parse.unquote(parsed.username or "")
+    password_part = urllib.parse.unquote(parsed.password or "")
+    auth = f"{username}:{password_part}" if password_part else username
+
+    if not server or not port or not auth:
+        return None
+
+    tls = {"serverName": query.get("sni") or server}
+
+    if truthy(query.get("insecure", "")) or truthy(query.get("allowInsecure", "")):
+        tls["allowInsecure"] = True
+
+    alpn = query.get("alpn")
+    tls["alpn"] = [v for v in urllib.parse.unquote(alpn).split(",") if v] if alpn else ["h3"]
+
+    stream = {
+        "network": "hysteria",
+        "security": "tls",
+        "tlsSettings": tls,
+        "hysteriaSettings": {"version": 2, "auth": auth},
+    }
+
+    obfs_type = query.get("obfs", "").lower()
+    obfs_password = query.get("obfs-password") or query.get("obfs_password")
+
+    if obfs_type:
+        if obfs_type != "salamander" or not obfs_password:
+            return None
+        stream["finalmask"] = {
+            "udp": [{"type": "salamander", "settings": {"password": obfs_password}}]
+        }
+
+    return {
+        "tag": tag,
+        "protocol": "hysteria",
+        "settings": {"version": 2, "address": server, "port": port},
+        "streamSettings": stream,
+    }
+
+
+def make_xray_outbound(uri, tag, allow_hysteria=False):
+    """vless:// (и hy2://, если разрешено) -> outbound в формате xray."""
+    parsed = urllib.parse.urlsplit(uri)
+    scheme = parsed.scheme.lower()
+
+    if scheme in {"hy2", "hysteria2"}:
+        if not allow_hysteria:
+            return None
+        return make_xray_hysteria_outbound(parsed, query_dict(parsed), tag)
+
+    if scheme != "vless":
         return None
 
     query = query_dict(parsed)
@@ -509,12 +571,14 @@ def make_xray_outbound(uri, tag):
     }
 
 
-def build_happ_json(source_name, uris):
+def build_happ_json(source_name, uris, allow_hysteria=False):
     """Один xray-JSON на источник: все конфиги + автовыбор по пингу."""
     proxies = []
 
     for uri in uris:
-        outbound = make_xray_outbound(uri, f"proxy-{len(proxies) + 1}")
+        outbound = make_xray_outbound(
+            uri, f"proxy-{len(proxies) + 1}", allow_hysteria
+        )
         if outbound is not None:
             proxies.append(outbound)
 
@@ -933,7 +997,17 @@ def uri_endpoint(uri):
 
 
 def get_working(source):
+    limit = source.get("limit", PER_SOURCE_LIMIT)
+    allow_hysteria = source.get("allow_hysteria", False)
+
     candidates = fetch_source(source)
+
+    # источники без поддержки hysteria: выкидываем hy2 сразу,
+    # чтобы они не занимали места в выборке
+    if not allow_hysteria:
+        candidates = [
+            item for item in candidates if item.lower().startswith("vless://")
+        ]
 
     if source["reject_russian_flag"]:
         candidates = [
@@ -1001,6 +1075,7 @@ def get_working(source):
             return index, uri, None, "skipped"
 
         # быстрый отсев: если TCP-порт сервера закрыт, sing-box запускать не надо
+        # (для hysteria2 это UDP, поэтому TCP-проверка только для vless)
         if outbound["type"] == "vless" and not tcp_open(
             outbound["server"], outbound["server_port"]
         ):
@@ -1049,7 +1124,7 @@ def get_working(source):
         print(f"{source['name']}: failure reasons -> {summary}")
 
     print(f"{source['name']}: {len(passed)} passed, best pings:")
-    for latency, uri in passed[:PER_SOURCE_LIMIT + 3]:
+    for latency, uri in passed[:limit + 3]:
         host, _ = uri_endpoint(uri)
         est, country = estimate_ping_ms(host, geo)
         print(
@@ -1057,15 +1132,21 @@ def get_working(source):
             f"runner {latency:.2f}s  {host}"
         )
 
-    selected = [uri for _, uri in passed[:PER_SOURCE_LIMIT]]
+    selected = [uri for _, uri in passed[:limit]]
     verified = len(selected)
 
     # добираем непроверенными, если проверенных мало: берём серверы с
     # открытым портом, самые быстрые по TCP-отклику идут первыми
-    if source.get("fill_unverified") and len(selected) < PER_SOURCE_LIMIT:
+    if source.get("fill_unverified") and len(selected) < limit:
         pool_unverified = [
             (index, uri) for index, uri in failed if index not in closed
         ] + [(index, uri) for index, uri, _ in untestable]
+
+        # hy2 работает по UDP, TCP-пинг к нему не показателен: в добор не берём
+        pool_unverified = [
+            item for item in pool_unverified
+            if item[1].lower().startswith("vless://")
+        ]
 
         def rtt_of(item):
             host, port = uri_endpoint(item[1])
@@ -1082,7 +1163,7 @@ def get_working(source):
         ranked.sort(key=lambda entry: geo_key(entry[1][1], geo_fill, entry[0]))
 
         for rtt, (index, uri) in ranked:
-            if len(selected) >= PER_SOURCE_LIMIT:
+            if len(selected) >= limit:
                 break
 
             print(
@@ -1091,10 +1172,10 @@ def get_working(source):
             )
             selected.append(uri)
 
-    if len(selected) < PER_SOURCE_LIMIT:
+    if len(selected) < limit:
         print(
             f"WARNING: {source['name']}: only {len(selected)} configs "
-            f"(wanted {PER_SOURCE_LIMIT})"
+            f"(wanted {limit})"
         )
 
     print(
@@ -1158,7 +1239,9 @@ def main():
             print(f"ERROR in source {source['name']}: {exc}")
             continue
 
-        profile = build_happ_json(source["name"], uris)
+        profile = build_happ_json(
+            source["name"], uris, source.get("allow_hysteria", False)
+        )
 
         if profile is None:
             print(
@@ -1170,7 +1253,7 @@ def main():
         skipped = len(uris) - count
         print(
             f"{source['name']}: JSON profile with {count} configs "
-            f"({skipped} skipped: not vless / unsupported)"
+            f"({skipped} skipped: unsupported)"
         )
         profiles.append(profile)
 
