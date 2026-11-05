@@ -18,11 +18,20 @@ from pathlib import Path
 
 SOURCES = [
     {
-        "name": "vlessforu",
-        "url": "https://sub.vlessfo.ru/vlessforu/working_configs.txt",
-        "reject_russian_flag": True,
+        "name": "fixcord",
+        "url": "https://admin.fixcord.gg/happ/PoR50fDqHKFF6CqibsaELhKozHTUtMyRoH_4RLVYuog/subscription",
+        "reject_russian_flag": False,
         "fill_unverified": False,   # непроверенные не добираем: нужны только стабильные
-        "limit": 15,                # конфигов в JSON
+        "limit": 2,                 # конфигов в JSON
+        # фильтр по названию конфига (часть после #)
+        "allowed_countries": [
+            "\U0001F1F8\U0001F1EA",  # 🇸🇪
+            "\U0001F1F1\U0001F1FB",  # 🇱🇻
+            "sweden", "швеция", "швеци", "stockholm", "стокгольм",
+            "latvia", "латвия", "латви", "riga", "рига",
+        ],
+        # запасной фильтр по геолокации IP сервера
+        "allowed_country_codes": ["SE", "LV"],
     },
 ]
 
@@ -78,6 +87,7 @@ USER_AGENTS = [
     "sing-box/1.14.4",
     "v2rayN/7.0",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36",
+    "Happ/3.0.0",
 ]
 
 PROBE_URLS = [
@@ -1024,12 +1034,26 @@ def get_working(source):
         ]
 
     allowed = source.get("allowed_countries")
+    allowed_codes = {c.upper() for c in source.get("allowed_country_codes", [])}
 
-    if allowed:
+    if allowed or allowed_codes:
         before = len(candidates)
-        candidates = [
-            item for item in candidates if matches_country(item, allowed)
-        ]
+
+        # запасной фильтр: страна по IP сервера
+        geo_filter = {}
+        if allowed_codes:
+            geo_filter = geolocate({uri_endpoint(item)[0] for item in candidates})
+
+        def country_ok(item):
+            if allowed and matches_country(item, allowed):
+                return True
+            if allowed_codes:
+                info = geo_filter.get(uri_endpoint(item)[0])
+                if info and info[2].upper() in allowed_codes:
+                    return True
+            return False
+
+        candidates = [item for item in candidates if country_ok(item)]
         print(
             f"{source['name']}: country filter kept "
             f"{len(candidates)} of {before} links"
