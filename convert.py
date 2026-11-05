@@ -43,11 +43,11 @@ SOURCES = [
         "fill_unverified": True,
     },
     {
-        "name": "pozor",
-        "url": "https://raw.githubusercontent.com/ReallySubHuman/vless-converter/refs/heads/main/vless.txt",
+        "name": "Unlisted",
+        "url": "https://clck.ly/3WnEfT",
         "reject_russian_flag": False,
         "fill_unverified": True,
-        "limit": 15,               # используется только если UNLIMITED = False
+        "limit": 20,               # используется только если UNLIMITED = False
         "allow_hysteria": True,    # vless + hysteria2
     },
     {
