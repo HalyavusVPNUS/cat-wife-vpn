@@ -19,9 +19,11 @@ from pathlib import Path
 SOURCES = [
     {
         "name": "fixnet",
-        "url": "https://raw.githubusercontent.com/HalyavusVPNUS/cat-wife-vpn/refs/heads/main/Fixnet.gg",
+        "url": "https://pozor.bond/sub/aa9ee514071e4d70b304",
         "reject_russian_flag": False,
-        "fill_unverified": False,   # непроверенные не добираем: нужны только стабильные
+        # xhttp-конфиги sing-box проверить не может, поэтому берём их без проверки
+        # (при открытом TCP-порте). Выбор рабочего делает balancer в Happ.
+        "fill_unverified": True,
         "limit": 10,                # конфигов в JSON
         # только Латвия и Швеция (по флагу или названию страны в имени конфига)
         "allowed_countries": [
@@ -78,6 +80,8 @@ REFERENCE_LOCATION = (
 GEO_BUCKET_MS = 25   # конфиги в пределах 25 мс считаем равными, дальше решает замер
 
 URI_RE = re.compile(r"""(?i)(?:vless|hysteria2|hy2)://[^\s<>"'`]+""")
+# построчный разбор: строка целиком, включая кавычки внутри (JSON в параметре extra)
+LINE_URI_RE = re.compile(r"(?im)^\s*((?:vless|hysteria2|hy2)://\S+)\s*$")
 
 USER_AGENTS = [
     "sing-box/1.14.4",
@@ -122,34 +126,57 @@ def decode_base64_text(value):
         return None
 
 
+def dedupe_list(items):
+    cleaned = []
+    seen = set()
+
+    for item in items:
+        if item and item not in seen:
+            seen.add(item)
+            cleaned.append(item)
+
+    return cleaned
+
+
+def extract_line_uris(text):
+    """Ссылки по одной на строку: берём строку целиком (кавычки внутри допустимы)."""
+    return dedupe_list(
+        match.rstrip(",;") for match in LINE_URI_RE.findall(text)
+    )
+
+
+def extract_regex_uris(text):
+    """Запасной вариант: ссылки внутри HTML/JSON, где кавычка = конец ссылки."""
+    return dedupe_list(
+        item.rstrip(",;)]}，。") for item in URI_RE.findall(text)
+    )
+
+
 def extract_uris(body):
     text = html.unescape(body)
     text = text.replace("\\/", "/").strip()
 
-    found = URI_RE.findall(text)
+    found = extract_line_uris(text)
+
+    if not found:
+        found = extract_regex_uris(text)
 
     if not found:
         decoded = decode_base64_text(text)
         if decoded:
-            found = URI_RE.findall(html.unescape(decoded))
+            decoded = html.unescape(decoded)
+            found = extract_line_uris(decoded) or extract_regex_uris(decoded)
 
     if not found:
         fragments = re.findall(r"[A-Za-z0-9_+/=-]{80,}", text)
         for fragment in fragments:
             decoded = decode_base64_text(fragment)
             if decoded:
-                found.extend(URI_RE.findall(decoded))
+                found.extend(
+                    extract_line_uris(decoded) or extract_regex_uris(decoded)
+                )
 
-    cleaned = []
-    seen = set()
-
-    for item in found:
-        item = item.rstrip(",;)]}，。")
-        if item not in seen:
-            seen.add(item)
-            cleaned.append(item)
-
-    return cleaned
+    return dedupe_list(found)
 
 
 def fetch_source(source):
@@ -1195,8 +1222,9 @@ def get_working(source):
         )
         return selected
 
-    # добираем непроверенными, только если источник это разрешает
-    # (для стабильной подписки fill_unverified лучше держать выключенным)
+    # добираем непроверенными, если источник это разрешает: в первую очередь
+    # xhttp-конфиги, которые sing-box проверить не может. Берём серверы
+    # с открытым TCP-портом, ближайшие к аудитории идут первыми
     if source.get("fill_unverified") and len(selected) < limit:
         pool_unverified = [
             (index, uri) for index, uri in failed if index not in closed
