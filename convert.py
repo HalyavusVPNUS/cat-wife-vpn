@@ -44,7 +44,7 @@ SOURCES = [
     },
     {
         "name": "pozor",
-        "url": "https://pozor.bond/sub/r7",
+        "url": "https://raw.githubusercontent.com/ReallySubHuman/vless-converter/refs/heads/main/vless.txt",
         "reject_russian_flag": False,
         "fill_unverified": True,
         "limit": 15,               # используется только если UNLIMITED = False
