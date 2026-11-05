@@ -18,26 +18,11 @@ from pathlib import Path
 
 SOURCES = [
     {
-        "name": "pozor",
-        "url": "https://pozor.bond/sub/aa9ee514071e4d70b304",
+        "name": "vlessforu",
+        "url": "https://sub.vlessfo.ru/vlessforu/working_configs.txt",
         "reject_russian_flag": True,
         "fill_unverified": False,   # непроверенные не добираем: нужны только стабильные
-        "limit": 10,                # конфигов в JSON
-        # только Швеция и Латвия (ищем в названии конфига, т.е. в части после #)
-        "allowed_countries": [
-            "\U0001F1F8\U0001F1EA",   # флаг Швеции
-            "\U0001F1F1\U0001F1FB",   # флаг Латвии
-            "sweden",
-            "swedish",
-            "stockholm",
-            "швеци",
-            "латви",
-            "latvia",
-            "riga",
-            "рига",
-        ],
-        # если в названии нет страны, определяем её по IP сервера
-        "allowed_country_codes": ["SE", "LV"],
+        "limit": 15,                # конфигов в JSON
     },
 ]
 
@@ -1039,37 +1024,12 @@ def get_working(source):
         ]
 
     allowed = source.get("allowed_countries")
-    allowed_codes = {c.upper() for c in source.get("allowed_country_codes", [])}
 
-    if allowed or allowed_codes:
+    if allowed:
         before = len(candidates)
-
-        # страна по IP сервера (на случай, если в названии конфига её нет)
-        ip_geo = {}
-        if allowed_codes:
-            ip_geo = geolocate({uri_endpoint(item)[0] for item in candidates})
-
-        kept = []
-
-        for item in candidates:
-            host, _ = uri_endpoint(item)
-            code = ip_geo.get(host, (0, 0, "??"))[2].upper()
-            by_name = bool(allowed) and matches_country(item, allowed)
-            by_ip = code in allowed_codes
-            keep = by_name or by_ip
-
-            title = urllib.parse.unquote(
-                html.unescape(urllib.parse.urlsplit(item).fragment)
-            )
-            print(
-                f"  [{'KEEP' if keep else 'drop'}] name={title[:40]!r} "
-                f"host={host} ip-country={code}"
-            )
-
-            if keep:
-                kept.append(item)
-
-        candidates = kept
+        candidates = [
+            item for item in candidates if matches_country(item, allowed)
+        ]
         print(
             f"{source['name']}: country filter kept "
             f"{len(candidates)} of {before} links"
