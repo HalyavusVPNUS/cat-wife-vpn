@@ -50,6 +50,18 @@ SOURCES = [
         "limit": 15,               # конфигов в этом JSON
         "allow_hysteria": True,    # vless + hysteria2
     },
+    {
+        "name": "buffetbarko",
+        "url": "https://raw.githubusercontent.com/Buffetbarko/Universal-Proxy-Config-Parser-/main/blacklist_vpn.txt",
+        "reject_russian_flag": False,
+        "fill_unverified": True,
+        "limit": 17,               # конфигов в этом JSON
+        # только эти страны (по эмодзи-флагу в названии конфига):
+        # Польша, Германия, Нидерланды, Австрия, Франция, Испания, Сербия
+        "allowed_countries": [
+            "🇵🇱", "🇩🇪", "🇳🇱", "🇦🇹", "🇫🇷", "🇪🇸", "🇷🇸",
+        ],
+    },
 ]
 
 OUTPUT_FILE = Path("cat.txt")
