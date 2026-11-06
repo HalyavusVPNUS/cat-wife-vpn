@@ -45,6 +45,23 @@ SOURCES = [
         "limit": 5,                 # конфигов в JSON
         # allowed_countries нет: берём все страны
     },
+    {
+        "name": "blacklist",
+        "title": "Blacklist VPN ⚫",
+        "url": "https://raw.githubusercontent.com/Buffetbarko/Universal-Proxy-Config-Parser-/main/blacklist_vpn.txt",
+        "reject_russian_flag": False,
+        # только стабильные: без добора непроверенными
+        "fill_unverified": False,
+        "limit": 15,                # конфигов в JSON
+        # только Германия, Нидерланды и Великобритания (в источнике в имени
+        # конфига стоит только флаг и пинг, например "🇩🇪 273ms")
+        "allowed_countries": [
+            "🇩🇪", "germany", "германия", "германии",
+            "🇳🇱", "netherlands", "нидерланды", "нидерландов", "holland",
+            "🇬🇧", "united kingdom", "great britain", "britain", "britania",
+            "великобритания", "великобритании", "британия",
+        ],
+    },
 ]
 
 OUTPUT_FILE = Path("cat.txt")
