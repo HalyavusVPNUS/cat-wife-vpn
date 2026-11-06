@@ -1,7 +1,7 @@
 import base64
 import html
 import json
-import math 
+import math
 import os
 import random
 import re
@@ -90,11 +90,16 @@ STABILITY_URLS = [
 ]
 
 # --- JSON-режим для Happ -------------------------------------------------
-# cat.txt = ЧИСТЫЙ JSON (без #-заголовков, иначе Happ пишет "no server link").
-# Название подписки отдаётся HTTP-заголовком через worker.js.
+# cat.txt = JSON-массив профилей. Название подписки Happ умеет брать из
+# #-строк в теле (#profile-title: ...). Перед JSON они ломали подписку
+# ("no server link"), поэтому ЭКСПЕРИМЕНТ: пишем их В КОНЕЦ файла, после JSON.
+# Если Happ после этого не видит серверы, поставь HAPP_META_FOOTER = False.
 BALANCER_PROBE_URL = "https://www.gstatic.com/generate_204"
 BALANCER_PROBE_INTERVAL = "1m"
-PROFILE_TITLE = "Кошка жена ВПН 🐈"   # запасное название, если у источника нет "title"
+PROFILE_TITLE = "Кошка жена ВПН 🐈"   # название подписки (Happ: до 25 символов)
+
+HAPP_META_FOOTER = True          # True = дописать #profile-title в конец файла
+HAPP_UPDATE_INTERVAL_HOURS = 1   # как часто Happ обновляет подписку, часы
 
 # Откуда считаем «близко»: где живёт аудитория подписки (по умолчанию Москва).
 # Пинг с раннера GitHub (США) для пользователей не показателен, поэтому
@@ -693,6 +698,22 @@ def build_happ_json(source_name, uris, allow_hysteria=False, title=None):
     }
 
     return config
+
+
+def build_happ_footer():
+    """#-строки с метаданными подписки для Happ (название, интервал обновления)."""
+    title_b64 = base64.b64encode(PROFILE_TITLE.encode("utf-8")).decode("ascii")
+
+    if len(PROFILE_TITLE) > 25:
+        print(
+            f"WARNING: PROFILE_TITLE is {len(PROFILE_TITLE)} chars, "
+            "Happ shows at most 25"
+        )
+
+    return (
+        f"#profile-title: base64:{title_b64}\n"
+        f"#profile-update-interval: {HAPP_UPDATE_INTERVAL_HOURS}\n"
+    )
 
 
 # ------------------------------------------------------------- probing
@@ -1413,9 +1434,14 @@ def main():
         print("No working configs found; keeping existing cat.txt")
         sys.exit(1)
 
-    # ВАЖНО: только чистый JSON, без #-заголовков, иначе Happ не распознает подписку
-    body = json.dumps(profiles, ensure_ascii=False, indent=2)
-    OUTPUT_FILE.write_text(body + "\n", encoding="utf-8")
+    body = json.dumps(profiles, ensure_ascii=False, indent=2) + "\n"
+
+    # ЭКСПЕРИМЕНТ: метаданные Happ (#profile-title) в КОНЦЕ файла, после JSON.
+    # Перед JSON они ломали подписку. Если серверы пропали: HAPP_META_FOOTER = False.
+    if HAPP_META_FOOTER:
+        body += build_happ_footer()
+
+    OUTPUT_FILE.write_text(body, encoding="utf-8")
 
     print(f"Done: wrote {len(profiles)} JSON profiles to {OUTPUT_FILE}")
 
