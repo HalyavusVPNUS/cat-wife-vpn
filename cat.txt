@@ -52,7 +52,7 @@
         "settings": {
           "vnext": [
             {
-              "address": "135.106.143.121",
+              "address": "161.104.38.107",
               "port": 443,
               "users": [
                 {
@@ -66,7 +66,7 @@
         "streamSettings": {
           "network": "xhttp",
           "xhttpSettings": {
-            "path": "/assets",
+            "path": "/upload",
             "mode": "packet-up",
             "extra": {
               "xmux": {
@@ -77,18 +77,18 @@
                 "hKeepAlivePeriod": 0
               },
               "downloadSettings": {
-                "address": "135.106.143.121",
+                "address": "161.104.38.107",
                 "port": 443,
                 "network": "xhttp",
                 "security": "reality",
                 "realitySettings": {
                   "fingerprint": "firefox",
-                  "serverName": "seo.alfastat.ru",
-                  "publicKey": "fz_xpZfQks3oa9c_d1OSokmTgmJuGbvFMkyK0Qt8w3I",
-                  "shortId": "75a0c0e236b0a436"
+                  "serverName": "img.redbarn.ru",
+                  "publicKey": "yY6BKckWhkJ4r_5raufIumhtWHJIvqdPD7YFnznodlA",
+                  "shortId": "094b2db0737de9f4"
                 },
                 "xhttpSettings": {
-                  "path": "/assets",
+                  "path": "/upload",
                   "xmux": {
                     "maxConnections": "2-3",
                     "cMaxReuseTimes": 0,
@@ -102,144 +102,16 @@
           },
           "security": "reality",
           "realitySettings": {
-            "serverName": "alfastat.ru",
+            "serverName": "redbarn.ru",
             "fingerprint": "firefox",
-            "publicKey": "fz_xpZfQks3oa9c_d1OSokmTgmJuGbvFMkyK0Qt8w3I",
-            "shortId": "0066a7326f06d426",
+            "publicKey": "yY6BKckWhkJ4r_5raufIumhtWHJIvqdPD7YFnznodlA",
+            "shortId": "6d06f5e94bbedd56",
             "spiderX": ""
           }
         }
       },
       {
         "tag": "proxy-2",
-        "protocol": "vless",
-        "settings": {
-          "vnext": [
-            {
-              "address": "161.104.38.107",
-              "port": 443,
-              "users": [
-                {
-                  "id": "af9d0c6e-0c74-0037-8275-05b4aa0f2ebe",
-                  "encryption": "none"
-                }
-              ]
-            }
-          ]
-        },
-        "streamSettings": {
-          "network": "xhttp",
-          "xhttpSettings": {
-            "path": "/upload",
-            "mode": "packet-up",
-            "extra": {
-              "xmux": {
-                "maxConnections": "1-2",
-                "cMaxReuseTimes": 0,
-                "hMaxRequestTimes": "900-1400",
-                "hMaxReusableSecs": "3600-5400",
-                "hKeepAlivePeriod": 0
-              },
-              "downloadSettings": {
-                "address": "161.104.38.107",
-                "port": 443,
-                "network": "xhttp",
-                "security": "reality",
-                "realitySettings": {
-                  "fingerprint": "firefox",
-                  "serverName": "img.redbarn.ru",
-                  "publicKey": "yY6BKckWhkJ4r_5raufIumhtWHJIvqdPD7YFnznodlA",
-                  "shortId": "094b2db0737de9f4"
-                },
-                "xhttpSettings": {
-                  "path": "/upload",
-                  "xmux": {
-                    "maxConnections": "2-3",
-                    "cMaxReuseTimes": 0,
-                    "hMaxRequestTimes": "700-1100",
-                    "hMaxReusableSecs": "2700-4200",
-                    "hKeepAlivePeriod": 0
-                  }
-                }
-              }
-            }
-          },
-          "security": "reality",
-          "realitySettings": {
-            "serverName": "redbarn.ru",
-            "fingerprint": "firefox",
-            "publicKey": "yY6BKckWhkJ4r_5raufIumhtWHJIvqdPD7YFnznodlA",
-            "shortId": "6d06f5e94bbedd56",
-            "spiderX": ""
-          }
-        }
-      },
-      {
-        "tag": "proxy-3",
-        "protocol": "vless",
-        "settings": {
-          "vnext": [
-            {
-              "address": "161.104.38.107",
-              "port": 443,
-              "users": [
-                {
-                  "id": "af9d0c6e-0c74-0029-8275-05b4aa0f2ebe",
-                  "encryption": "none"
-                }
-              ]
-            }
-          ]
-        },
-        "streamSettings": {
-          "network": "xhttp",
-          "xhttpSettings": {
-            "path": "/upload",
-            "mode": "packet-up",
-            "extra": {
-              "xmux": {
-                "maxConnections": "1-2",
-                "cMaxReuseTimes": 0,
-                "hMaxRequestTimes": "900-1400",
-                "hMaxReusableSecs": "3600-5400",
-                "hKeepAlivePeriod": 0
-              },
-              "downloadSettings": {
-                "address": "161.104.38.107",
-                "port": 443,
-                "network": "xhttp",
-                "security": "reality",
-                "realitySettings": {
-                  "fingerprint": "firefox",
-                  "serverName": "img.redbarn.ru",
-                  "publicKey": "yY6BKckWhkJ4r_5raufIumhtWHJIvqdPD7YFnznodlA",
-                  "shortId": "094b2db0737de9f4"
-                },
-                "xhttpSettings": {
-                  "path": "/upload",
-                  "xmux": {
-                    "maxConnections": "2-3",
-                    "cMaxReuseTimes": 0,
-                    "hMaxRequestTimes": "700-1100",
-                    "hMaxReusableSecs": "2700-4200",
-                    "hKeepAlivePeriod": 0
-                  }
-                }
-              }
-            }
-          },
-          "security": "reality",
-          "realitySettings": {
-            "serverName": "redbarn.ru",
-            "fingerprint": "firefox",
-            "publicKey": "yY6BKckWhkJ4r_5raufIumhtWHJIvqdPD7YFnznodlA",
-            "shortId": "6d06f5e94bbedd56",
-            "spiderX": ""
-          }
-        }
-      },
-      {
-        "tag": "proxy-4",
         "protocol": "vless",
         "settings": {
           "vnext": [
@@ -298,6 +170,134 @@
             "fingerprint": "firefox",
             "publicKey": "fz_xpZfQks3oa9c_d1OSokmTgmJuGbvFMkyK0Qt8w3I",
             "shortId": "0066a7326f06d426",
+            "spiderX": ""
+          }
+        }
+      },
+      {
+        "tag": "proxy-3",
+        "protocol": "vless",
+        "settings": {
+          "vnext": [
+            {
+              "address": "135.106.143.121",
+              "port": 443,
+              "users": [
+                {
+                  "id": "af9d0c6e-0c74-0037-8275-05b4aa0f2ebe",
+                  "encryption": "none"
+                }
+              ]
+            }
+          ]
+        },
+        "streamSettings": {
+          "network": "xhttp",
+          "xhttpSettings": {
+            "path": "/assets",
+            "mode": "packet-up",
+            "extra": {
+              "xmux": {
+                "maxConnections": "1-2",
+                "cMaxReuseTimes": 0,
+                "hMaxRequestTimes": "900-1400",
+                "hMaxReusableSecs": "3600-5400",
+                "hKeepAlivePeriod": 0
+              },
+              "downloadSettings": {
+                "address": "135.106.143.121",
+                "port": 443,
+                "network": "xhttp",
+                "security": "reality",
+                "realitySettings": {
+                  "fingerprint": "firefox",
+                  "serverName": "seo.alfastat.ru",
+                  "publicKey": "fz_xpZfQks3oa9c_d1OSokmTgmJuGbvFMkyK0Qt8w3I",
+                  "shortId": "75a0c0e236b0a436"
+                },
+                "xhttpSettings": {
+                  "path": "/assets",
+                  "xmux": {
+                    "maxConnections": "2-3",
+                    "cMaxReuseTimes": 0,
+                    "hMaxRequestTimes": "700-1100",
+                    "hMaxReusableSecs": "2700-4200",
+                    "hKeepAlivePeriod": 0
+                  }
+                }
+              }
+            }
+          },
+          "security": "reality",
+          "realitySettings": {
+            "serverName": "alfastat.ru",
+            "fingerprint": "firefox",
+            "publicKey": "fz_xpZfQks3oa9c_d1OSokmTgmJuGbvFMkyK0Qt8w3I",
+            "shortId": "0066a7326f06d426",
+            "spiderX": ""
+          }
+        }
+      },
+      {
+        "tag": "proxy-4",
+        "protocol": "vless",
+        "settings": {
+          "vnext": [
+            {
+              "address": "161.104.38.107",
+              "port": 443,
+              "users": [
+                {
+                  "id": "af9d0c6e-0c74-0029-8275-05b4aa0f2ebe",
+                  "encryption": "none"
+                }
+              ]
+            }
+          ]
+        },
+        "streamSettings": {
+          "network": "xhttp",
+          "xhttpSettings": {
+            "path": "/upload",
+            "mode": "packet-up",
+            "extra": {
+              "xmux": {
+                "maxConnections": "1-2",
+                "cMaxReuseTimes": 0,
+                "hMaxRequestTimes": "900-1400",
+                "hMaxReusableSecs": "3600-5400",
+                "hKeepAlivePeriod": 0
+              },
+              "downloadSettings": {
+                "address": "161.104.38.107",
+                "port": 443,
+                "network": "xhttp",
+                "security": "reality",
+                "realitySettings": {
+                  "fingerprint": "firefox",
+                  "serverName": "img.redbarn.ru",
+                  "publicKey": "yY6BKckWhkJ4r_5raufIumhtWHJIvqdPD7YFnznodlA",
+                  "shortId": "094b2db0737de9f4"
+                },
+                "xhttpSettings": {
+                  "path": "/upload",
+                  "xmux": {
+                    "maxConnections": "2-3",
+                    "cMaxReuseTimes": 0,
+                    "hMaxRequestTimes": "700-1100",
+                    "hMaxReusableSecs": "2700-4200",
+                    "hKeepAlivePeriod": 0
+                  }
+                }
+              }
+            }
+          },
+          "security": "reality",
+          "realitySettings": {
+            "serverName": "redbarn.ru",
+            "fingerprint": "firefox",
+            "publicKey": "yY6BKckWhkJ4r_5raufIumhtWHJIvqdPD7YFnznodlA",
+            "shortId": "6d06f5e94bbedd56",
             "spiderX": ""
           }
         }
