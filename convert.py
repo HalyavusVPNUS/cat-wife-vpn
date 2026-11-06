@@ -19,8 +19,8 @@ from pathlib import Path
 SOURCES = [
     {
         "name": "fixnet",
-        "title": "fixnet",         # название профиля внутри Happ
-        "url": "https://pozor.bond/sub/aa9ee514071e4d70b304",
+        "title": "Кошка жена ВПН 🐈",
+        "url": "https://raw.githubusercontent.com/HalyavusVPNUS/cat-wife-vpn/refs/heads/main/Fixnet.gg",
         "reject_russian_flag": False,
         # xhttp-конфиги sing-box проверить не может, поэтому берём их без проверки
         # (при открытом TCP-порте). Выбор рабочего делает balancer в Happ.
@@ -34,12 +34,13 @@ SOURCES = [
     },
     {
         "name": "okeania",
-        "title": "okeania",
+        "title": "Okeania 🌊",
         "url": "https://raw.githubusercontent.com/HalyavusVPNUS/vless-subscription/refs/heads/main/hysteria.txt",
         "reject_russian_flag": False,
-        "fill_unverified": False,   # добор непроверенными выключен: нужны только стабильные
+        "allow_hysteria": True,     # в источнике hysteria2-конфиги
+        "fill_unverified": False,
         "limit": 5,                 # конфигов в JSON
-        "allow_hysteria": True,     # vless + hysteria2
+        # allowed_countries нет: берём все страны
     },
 ]
 
@@ -604,8 +605,8 @@ def make_xray_outbound(uri, tag, allow_hysteria=False):
     }
 
 
-def build_happ_json(title, uris, allow_hysteria=False):
-    """Один xray-JSON на источник: все его конфиги + автовыбор по пингу."""
+def build_happ_json(source_name, uris, allow_hysteria=False, title=None):
+    """Один xray-JSON: все конфиги + автовыбор по пингу."""
     proxies = []
 
     for uri in uris:
@@ -619,7 +620,7 @@ def build_happ_json(title, uris, allow_hysteria=False):
         return None
 
     config = {
-        "remarks": title,
+        "remarks": title or PROFILE_TITLE,
         "log": {"loglevel": "warning"},
         "dns": {"servers": ["1.1.1.1", "8.8.8.8"], "queryStrategy": "UseIP"},
         "inbounds": [
@@ -1340,9 +1341,10 @@ def main():
             continue
 
         profile = build_happ_json(
-            source.get("title", PROFILE_TITLE),
+            source["name"],
             uris,
             source.get("allow_hysteria", False),
+            source.get("title"),
         )
 
         if profile is None:
