@@ -46,21 +46,16 @@ SOURCES = [
         # allowed_countries нет: берём все страны
     },
     {
-        "name": "blacklist",
-        "title": "Blacklist VPN ⚫",
-        "url": "https://raw.githubusercontent.com/Buffetbarko/Universal-Proxy-Config-Parser-/main/blacklist_vpn.txt",
+        "name": "vlessforu",
+        "title": "Vlessforu ❤️ FREE",
+        "url": "https://sub.vlessfo.ru/vlessforu/working_configs.txt",
         "reject_russian_flag": False,
-        # только стабильные: без добора непроверенными
+        # В начале подписки лежат самые лучшие конфиги: проверяем строго по порядку
+        # и берём первые прошедшие проверку (без сортировки по гео/стабильности).
+        "prefer_order": True,
         "fill_unverified": False,
-        "limit": 15,                # конфигов в JSON
-        # только Германия, Нидерланды и Великобритания (в источнике в имени
-        # конфига стоит только флаг и пинг, например "🇩🇪 273ms")
-        "allowed_countries": [
-            "🇩🇪", "germany", "германия", "германии",
-            "🇳🇱", "netherlands", "нидерланды", "нидерландов", "holland",
-            "🇬🇧", "united kingdom", "great britain", "britain", "britania",
-            "великобритания", "великобритании", "британия",
-        ],
+        "limit": 10,                # конфигов в JSON
+        # allowed_countries нет: берём все страны
     },
 ]
 
@@ -1141,8 +1136,14 @@ def get_working(source):
     skipped_by_time = 0
     deadline = time.monotonic() + SOURCE_TIME_BUDGET
 
+    prefer_order = source.get("prefer_order", False)
+
     # случайный порядок, чтобы лимит по времени не резал одни и те же конфиги
-    random.shuffle(testable)
+    # (для prefer_order порядок подписки сохраняется: начало = лучшие конфиги)
+    if not prefer_order:
+        random.shuffle(testable)
+
+    order = {uri: index for index, uri, _ in jobs}   # позиция в подписке
 
     def work(index, uri, outbound):
         if time.monotonic() > deadline:
@@ -1169,35 +1170,58 @@ def get_working(source):
 
         return index, uri, result, reason
 
-    with ThreadPoolExecutor(max_workers=WORKERS) as pool:
-        futures = [
-            pool.submit(work, index, uri, outbound)
-            for index, uri, outbound in testable
+    # prefer_order: проверяем пачками по порядку и останавливаемся, как только
+    # набрали лимит стабильных: конфиги из конца подписки тогда не тестируются
+    if prefer_order and limit is not None:
+        batch_size = WORKERS * 2
+        batches = [
+            testable[i:i + batch_size] for i in range(0, len(testable), batch_size)
         ]
+    else:
+        batches = [testable]
 
-        for future in as_completed(futures):
-            index, uri, result, reason = future.result()
+    not_tested = 0
 
-            if reason == "skipped":
-                skipped_by_time += 1
-                continue
+    with ThreadPoolExecutor(max_workers=WORKERS) as pool:
+        for batch_no, batch in enumerate(batches):
+            futures = [
+                pool.submit(work, index, uri, outbound)
+                for index, uri, outbound in batch
+            ]
 
-            if result is not None:
-                latency, stability = result
-                print(
-                    f"{source['name']} #{index}: PASS "
-                    f"({latency:.2f}s, stable {stability:.0%})"
-                )
-                passed.append((latency, uri, stability))
-            else:
-                print(f"{source['name']} #{index}: FAIL - {reason}")
-                failed.append((index, uri))
+            for future in as_completed(futures):
+                index, uri, result, reason = future.result()
 
-                if reason == "tcp port closed":
-                    closed.add(index)
+                if reason == "skipped":
+                    skipped_by_time += 1
+                    continue
 
-                kind = reason.split(":")[0][:30]
-                reasons[kind] = reasons.get(kind, 0) + 1
+                if result is not None:
+                    latency, stability = result
+                    print(
+                        f"{source['name']} #{index}: PASS "
+                        f"({latency:.2f}s, stable {stability:.0%})"
+                    )
+                    passed.append((latency, uri, stability))
+                else:
+                    print(f"{source['name']} #{index}: FAIL - {reason}")
+                    failed.append((index, uri))
+
+                    if reason == "tcp port closed":
+                        closed.add(index)
+
+                    kind = reason.split(":")[0][:30]
+                    reasons[kind] = reasons.get(kind, 0) + 1
+
+            if prefer_order and limit is not None and len(passed) >= limit:
+                not_tested = sum(len(b) for b in batches[batch_no + 1:])
+                break
+
+    if not_tested:
+        print(
+            f"{source['name']}: got {limit} stable configs, "
+            f"{not_tested} later configs not tested (prefer_order)"
+        )
 
     if skipped_by_time:
         print(
@@ -1208,13 +1232,17 @@ def get_working(source):
     # сначала самые стабильные, потом ближайшие к аудитории, потом по замеру
     # (пинг с раннера из США для пользователей не показателен)
     geo = geolocate({uri_endpoint(uri)[0] for _, uri, _ in passed})
-    passed.sort(
-        key=lambda item: (
-            -round(item[2], 2),
-            geo_bucket(item[1], geo),
-            item[0],
+    if prefer_order:
+        # порядок подписки: чем раньше конфиг в списке, тем он приоритетнее
+        passed.sort(key=lambda item: order.get(item[1], 10 ** 9))
+    else:
+        passed.sort(
+            key=lambda item: (
+                -round(item[2], 2),
+                geo_bucket(item[1], geo),
+                item[0],
+            )
         )
-    )
 
     if reasons:
         summary = ", ".join(f"{k}: {v}" for k, v in sorted(reasons.items()))
