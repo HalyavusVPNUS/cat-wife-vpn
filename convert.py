@@ -19,6 +19,7 @@ from pathlib import Path
 SOURCES = [
     {
         "name": "fixnet",
+        "title": "fixnet",         # название профиля внутри Happ
         "url": "https://pozor.bond/sub/aa9ee514071e4d70b304",
         "reject_russian_flag": False,
         # xhttp-конфиги sing-box проверить не может, поэтому берём их без проверки
@@ -33,13 +34,12 @@ SOURCES = [
     },
     {
         "name": "okeania",
-        "title": "okeania",         # название этого JSON (remarks)
+        "title": "okeania",
         "url": "https://raw.githubusercontent.com/HalyavusVPNUS/vless-subscription/refs/heads/main/hysteria.txt",
         "reject_russian_flag": False,
-        # сначала берутся самые стабильные; если их меньше 5, добираются
-        # непроверенные с открытым портом (выбор рабочего делает balancer в Happ)
-        "fill_unverified": True,
+        "fill_unverified": False,   # добор непроверенными выключен: нужны только стабильные
         "limit": 5,                 # конфигов в JSON
+        "allow_hysteria": True,     # vless + hysteria2
     },
 ]
 
@@ -78,7 +78,7 @@ STABILITY_URLS = [
 # Название подписки отдаётся HTTP-заголовком через worker.js.
 BALANCER_PROBE_URL = "https://www.gstatic.com/generate_204"
 BALANCER_PROBE_INTERVAL = "1m"
-PROFILE_TITLE = "Кошка жена ВПН 🐈"   # название по умолчанию, если у источника нет "title"
+PROFILE_TITLE = "Кошка жена ВПН 🐈"   # запасное название, если у источника нет "title"
 
 # Откуда считаем «близко»: где живёт аудитория подписки (по умолчанию Москва).
 # Пинг с раннера GitHub (США) для пользователей не показателен, поэтому
@@ -605,7 +605,7 @@ def make_xray_outbound(uri, tag, allow_hysteria=False):
 
 
 def build_happ_json(title, uris, allow_hysteria=False):
-    """Один xray-JSON: все конфиги + автовыбор по пингу. title = remarks."""
+    """Один xray-JSON на источник: все его конфиги + автовыбор по пингу."""
     proxies = []
 
     for uri in uris:
