@@ -52,75 +52,11 @@
         "settings": {
           "vnext": [
             {
-              "address": "161.104.38.107",
-              "port": 443,
-              "users": [
-                {
-                  "id": "af9d0c6e-0c74-0037-8275-05b4aa0f2ebe",
-                  "encryption": "none"
-                }
-              ]
-            }
-          ]
-        },
-        "streamSettings": {
-          "network": "xhttp",
-          "xhttpSettings": {
-            "path": "/upload",
-            "mode": "packet-up",
-            "extra": {
-              "xmux": {
-                "maxConnections": "1-2",
-                "cMaxReuseTimes": 0,
-                "hMaxRequestTimes": "900-1400",
-                "hMaxReusableSecs": "3600-5400",
-                "hKeepAlivePeriod": 0
-              },
-              "downloadSettings": {
-                "address": "161.104.38.107",
-                "port": 443,
-                "network": "xhttp",
-                "security": "reality",
-                "realitySettings": {
-                  "fingerprint": "firefox",
-                  "serverName": "img.redbarn.ru",
-                  "publicKey": "yY6BKckWhkJ4r_5raufIumhtWHJIvqdPD7YFnznodlA",
-                  "shortId": "094b2db0737de9f4"
-                },
-                "xhttpSettings": {
-                  "path": "/upload",
-                  "xmux": {
-                    "maxConnections": "2-3",
-                    "cMaxReuseTimes": 0,
-                    "hMaxRequestTimes": "700-1100",
-                    "hMaxReusableSecs": "2700-4200",
-                    "hKeepAlivePeriod": 0
-                  }
-                }
-              }
-            }
-          },
-          "security": "reality",
-          "realitySettings": {
-            "serverName": "redbarn.ru",
-            "fingerprint": "firefox",
-            "publicKey": "yY6BKckWhkJ4r_5raufIumhtWHJIvqdPD7YFnznodlA",
-            "shortId": "6d06f5e94bbedd56",
-            "spiderX": ""
-          }
-        }
-      },
-      {
-        "tag": "proxy-2",
-        "protocol": "vless",
-        "settings": {
-          "vnext": [
-            {
               "address": "135.106.143.121",
               "port": 443,
               "users": [
                 {
-                  "id": "af9d0c6e-0c74-003a-8275-05b4aa0f2ebe",
+                  "id": "af9d0c6e-0c74-0037-8275-05b4aa0f2ebe",
                   "encryption": "none"
                 }
               ]
@@ -175,7 +111,7 @@
         }
       },
       {
-        "tag": "proxy-3",
+        "tag": "proxy-2",
         "protocol": "vless",
         "settings": {
           "vnext": [
@@ -239,6 +175,70 @@
         }
       },
       {
+        "tag": "proxy-3",
+        "protocol": "vless",
+        "settings": {
+          "vnext": [
+            {
+              "address": "161.104.38.107",
+              "port": 443,
+              "users": [
+                {
+                  "id": "af9d0c6e-0c74-0037-8275-05b4aa0f2ebe",
+                  "encryption": "none"
+                }
+              ]
+            }
+          ]
+        },
+        "streamSettings": {
+          "network": "xhttp",
+          "xhttpSettings": {
+            "path": "/upload",
+            "mode": "packet-up",
+            "extra": {
+              "xmux": {
+                "maxConnections": "1-2",
+                "cMaxReuseTimes": 0,
+                "hMaxRequestTimes": "900-1400",
+                "hMaxReusableSecs": "3600-5400",
+                "hKeepAlivePeriod": 0
+              },
+              "downloadSettings": {
+                "address": "161.104.38.107",
+                "port": 443,
+                "network": "xhttp",
+                "security": "reality",
+                "realitySettings": {
+                  "fingerprint": "firefox",
+                  "serverName": "img.redbarn.ru",
+                  "publicKey": "yY6BKckWhkJ4r_5raufIumhtWHJIvqdPD7YFnznodlA",
+                  "shortId": "094b2db0737de9f4"
+                },
+                "xhttpSettings": {
+                  "path": "/upload",
+                  "xmux": {
+                    "maxConnections": "2-3",
+                    "cMaxReuseTimes": 0,
+                    "hMaxRequestTimes": "700-1100",
+                    "hMaxReusableSecs": "2700-4200",
+                    "hKeepAlivePeriod": 0
+                  }
+                }
+              }
+            }
+          },
+          "security": "reality",
+          "realitySettings": {
+            "serverName": "redbarn.ru",
+            "fingerprint": "firefox",
+            "publicKey": "yY6BKckWhkJ4r_5raufIumhtWHJIvqdPD7YFnznodlA",
+            "shortId": "6d06f5e94bbedd56",
+            "spiderX": ""
+          }
+        }
+      },
+      {
         "tag": "proxy-4",
         "protocol": "vless",
         "settings": {
@@ -248,7 +248,7 @@
               "port": 443,
               "users": [
                 {
-                  "id": "af9d0c6e-0c74-0037-8275-05b4aa0f2ebe",
+                  "id": "af9d0c6e-0c74-003a-8275-05b4aa0f2ebe",
                   "encryption": "none"
                 }
               ]
@@ -395,36 +395,6 @@
         "settings": {
           "vnext": [
             {
-              "address": "ee.subv.ru",
-              "port": 443,
-              "users": [
-                {
-                  "id": "90157e25-cee1-4217-921e-91f300bc1a24",
-                  "encryption": "none",
-                  "flow": "xtls-rprx-vision"
-                }
-              ]
-            }
-          ]
-        },
-        "streamSettings": {
-          "network": "tcp",
-          "security": "reality",
-          "realitySettings": {
-            "serverName": "dvizhok.su",
-            "fingerprint": "firefox",
-            "publicKey": "1vSZjvhZO01oAEH3b7eebR1qF5dLU1Dq2E7xu8pwGSs",
-            "shortId": "428ef87fd47a3a32",
-            "spiderX": ""
-          }
-        }
-      },
-      {
-        "tag": "proxy-2",
-        "protocol": "vless",
-        "settings": {
-          "vnext": [
-            {
               "address": "92.42.201.155",
               "port": 14443,
               "users": [
@@ -450,48 +420,16 @@
         }
       },
       {
-        "tag": "proxy-3",
+        "tag": "proxy-2",
         "protocol": "vless",
         "settings": {
           "vnext": [
             {
-              "address": "93.152.211.119",
-              "port": 8445,
+              "address": "83.141.67.164",
+              "port": 8443,
               "users": [
                 {
-                  "id": "6d987d5d-90d4-4bea-97fe-6b0610e40ff4",
-                  "encryption": "none"
-                }
-              ]
-            }
-          ]
-        },
-        "streamSettings": {
-          "network": "grpc",
-          "grpcSettings": {
-            "serviceName": "grpc-reality"
-          },
-          "security": "reality",
-          "realitySettings": {
-            "serverName": "ads.x5.ru",
-            "fingerprint": "firefox",
-            "publicKey": "-oJS0Rw7oLz0audAETu1-RuJSZCBMcAjFMVDmD40YSU",
-            "shortId": "9cb329df19cc45e8",
-            "spiderX": ""
-          }
-        }
-      },
-      {
-        "tag": "proxy-4",
-        "protocol": "vless",
-        "settings": {
-          "vnext": [
-            {
-              "address": "pl-balancer.peregrine-sub.net",
-              "port": 443,
-              "users": [
-                {
-                  "id": "42a64b9a-ab79-4094-8656-30366a7c2ea3",
+                  "id": "f4ef1d6a-8f01-4ccd-8547-5b5a2a572d00",
                   "encryption": "none",
                   "flow": "xtls-rprx-vision"
                 }
@@ -503,21 +441,21 @@
           "network": "tcp",
           "security": "reality",
           "realitySettings": {
-            "serverName": "pl-balancer.peregrine-sub.net",
+            "serverName": "360.yandex.ru",
             "fingerprint": "firefox",
-            "publicKey": "Y2uyTCt5ofoFht6Xl-55dBPCBUiYi1fFTVcmZtoiqFw",
-            "shortId": "",
+            "publicKey": "qUq7a-iukyszVvH-5C74VBujzYAMC_shfv8O-1crZlY",
+            "shortId": "09fd8f6666eec544",
             "spiderX": ""
           }
         }
       },
       {
-        "tag": "proxy-5",
+        "tag": "proxy-3",
         "protocol": "vless",
         "settings": {
           "vnext": [
             {
-              "address": "litauto.plus-hit.ru",
+              "address": "84.32.209.132",
               "port": 443,
               "users": [
                 {
@@ -534,9 +472,75 @@
           "security": "reality",
           "realitySettings": {
             "serverName": "litauto.plus-hit.ru",
-            "fingerprint": "chrome",
+            "fingerprint": "firefox",
             "publicKey": "N4UtYAhibzkb0n_U2Qmqze5-lZMQqDozqg7OCqvufGA",
             "shortId": "7c8e3d4a9b1f26d3",
+            "spiderX": ""
+          }
+        }
+      },
+      {
+        "tag": "proxy-4",
+        "protocol": "vless",
+        "settings": {
+          "vnext": [
+            {
+              "address": "nl2-edge.gacvpn.site",
+              "port": 443,
+              "users": [
+                {
+                  "id": "981c7ccc-2b17-473c-8358-7fd1d6eec1b4",
+                  "encryption": "none"
+                }
+              ]
+            }
+          ]
+        },
+        "streamSettings": {
+          "network": "ws",
+          "wsSettings": {
+            "path": "/static/js/vendor.8a967130.js?ed=2048",
+            "headers": {
+              "Host": "nl2-edge.gacvpn.site"
+            }
+          },
+          "security": "tls",
+          "tlsSettings": {
+            "serverName": "nl2-edge.gacvpn.site",
+            "fingerprint": "firefox"
+          }
+        }
+      },
+      {
+        "tag": "proxy-5",
+        "protocol": "vless",
+        "settings": {
+          "vnext": [
+            {
+              "address": "pl-b1.golangwikito.cfd",
+              "port": 61374,
+              "users": [
+                {
+                  "id": "f8d52ece-fad4-478d-875d-df6eed3befa7",
+                  "encryption": "none"
+                }
+              ]
+            }
+          ]
+        },
+        "streamSettings": {
+          "network": "xhttp",
+          "xhttpSettings": {
+            "path": "/",
+            "host": "pl-b1.golangwikito.cfd",
+            "mode": "packet-up"
+          },
+          "security": "reality",
+          "realitySettings": {
+            "serverName": "pl-b1.golangwikito.cfd",
+            "fingerprint": "chrome",
+            "publicKey": "QrNs0ew7snHqLfpVXS9RAhlRzgAzzGZK9fXmDcx9xHI",
+            "shortId": "",
             "spiderX": ""
           }
         }
