@@ -19,7 +19,7 @@ from pathlib import Path
 SOURCES = [
     {
         "name": "fixnet",
-        "title": "Кошка жена ВПН 🐈",
+        "title": "🇰🇵 Северная корея #1",
         "url": "https://raw.githubusercontent.com/HalyavusVPNUS/cat-wife-vpn/refs/heads/main/Fixnet.gg",
         "reject_russian_flag": False,
         # xhttp-конфиги sing-box проверить не может, поэтому берём их без проверки
@@ -34,7 +34,7 @@ SOURCES = [
     },
     {
         "name": "okeania",
-        "title": "Okeania 🌊",
+        "title": "🇰🇵 Северная корея #2",
         "url": "https://raw.githubusercontent.com/HalyavusVPNUS/vless-subscription/refs/heads/main/hysteria.txt",
         "reject_russian_flag": False,
         "allow_hysteria": True,
@@ -43,18 +43,6 @@ SOURCES = [
         # и пропускался, поэтому добираем непроверенными (при открытом TCP-порте).
         "fill_unverified": True,
         "limit": 5,                 # конфигов в JSON
-        # allowed_countries нет: берём все страны
-    },
-    {
-        "name": "vlessforu",
-        "title": "Vlessforu ❤️ FREE",
-        "url": "https://sub.vlessfo.ru/vlessforu/working_configs.txt",
-        "reject_russian_flag": False,
-        # В начале подписки лежат самые лучшие конфиги: проверяем строго по порядку
-        # и берём первые прошедшие проверку (без сортировки по гео/стабильности).
-        "prefer_order": True,
-        "fill_unverified": False,
-        "limit": 10,                # конфигов в JSON
         # allowed_countries нет: берём все страны
     },
 ]
