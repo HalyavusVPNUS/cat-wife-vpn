@@ -37,8 +37,11 @@ SOURCES = [
         "title": "Okeania 🌊",
         "url": "https://raw.githubusercontent.com/HalyavusVPNUS/vless-subscription/refs/heads/main/hysteria.txt",
         "reject_russian_flag": False,
-        "allow_hysteria": True,     # в источнике hysteria2-конфиги
-        "fill_unverified": False,
+        "allow_hysteria": True,
+        # В файле лежат vless-конфиги (в т.ч. «белые списки» и xhttp), которые
+        # с раннера GitHub не проходят проверку. Без добора JSON получался пустым
+        # и пропускался, поэтому добираем непроверенными (при открытом TCP-порте).
+        "fill_unverified": True,
         "limit": 5,                 # конфигов в JSON
         # allowed_countries нет: берём все страны
     },
