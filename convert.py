@@ -19,7 +19,7 @@ from pathlib import Path
 SOURCES = [
     {
         "name": "fixnet",
-        "url": "https://raw.githubusercontent.com/HalyavusVPNUS/cat-wife-vpn/refs/heads/main/Fixnet.gg",
+        "url": "https://pozor.bond/sub/aa9ee514071e4d70b304",
         "reject_russian_flag": False,
         # xhttp-конфиги sing-box проверить не может, поэтому берём их без проверки
         # (при открытом TCP-порте). Выбор рабочего делает balancer в Happ.
@@ -32,15 +32,14 @@ SOURCES = [
         ],
     },
     {
-        "name": "hysteria",
+        "name": "okeania",
+        "title": "okeania",         # название этого JSON (remarks)
         "url": "https://raw.githubusercontent.com/HalyavusVPNUS/vless-subscription/refs/heads/main/hysteria.txt",
         "reject_russian_flag": False,
-        # в файле hysteria2-ссылки, поэтому разрешаем hy2 (нужен свежий xray-core в Happ)
-        "allow_hysteria": True,
-        # hy2 работает по UDP, TCP-добор не показателен
-        "fill_unverified": False,
+        # сначала берутся самые стабильные; если их меньше 5, добираются
+        # непроверенные с открытым портом (выбор рабочего делает balancer в Happ)
+        "fill_unverified": True,
         "limit": 5,                 # конфигов в JSON
-        # без фильтра по странам: берём все
     },
 ]
 
@@ -79,7 +78,7 @@ STABILITY_URLS = [
 # Название подписки отдаётся HTTP-заголовком через worker.js.
 BALANCER_PROBE_URL = "https://www.gstatic.com/generate_204"
 BALANCER_PROBE_INTERVAL = "1m"
-PROFILE_TITLE = "Кошка жена ВПН 🐈"
+PROFILE_TITLE = "Кошка жена ВПН 🐈"   # название по умолчанию, если у источника нет "title"
 
 # Откуда считаем «близко»: где живёт аудитория подписки (по умолчанию Москва).
 # Пинг с раннера GitHub (США) для пользователей не показателен, поэтому
@@ -605,8 +604,8 @@ def make_xray_outbound(uri, tag, allow_hysteria=False):
     }
 
 
-def build_happ_json(source_name, uris, allow_hysteria=False, title=None):
-    """Один xray-JSON: все конфиги + автовыбор по пингу."""
+def build_happ_json(title, uris, allow_hysteria=False):
+    """Один xray-JSON: все конфиги + автовыбор по пингу. title = remarks."""
     proxies = []
 
     for uri in uris:
@@ -620,7 +619,7 @@ def build_happ_json(source_name, uris, allow_hysteria=False, title=None):
         return None
 
     config = {
-        "remarks": title or PROFILE_TITLE,
+        "remarks": title,
         "log": {"loglevel": "warning"},
         "dns": {"servers": ["1.1.1.1", "8.8.8.8"], "queryStrategy": "UseIP"},
         "inbounds": [
@@ -1341,10 +1340,9 @@ def main():
             continue
 
         profile = build_happ_json(
-            source["name"],
+            source.get("title", PROFILE_TITLE),
             uris,
             source.get("allow_hysteria", False),
-            source.get("title"),
         )
 
         if profile is None:
