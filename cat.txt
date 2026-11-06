@@ -1,6 +1,6 @@
 [
   {
-    "remarks": "Кошка жена ВПН 🐈",
+    "remarks": "okeania",
     "log": {
       "loglevel": "warning"
     },
@@ -52,11 +52,11 @@
         "settings": {
           "vnext": [
             {
-              "address": "161.104.38.107",
-              "port": 443,
+              "address": "95.129.234.113",
+              "port": 8443,
               "users": [
                 {
-                  "id": "af9d0c6e-0c74-0029-8275-05b4aa0f2ebe",
+                  "id": "88281d02-b387-4fe3-918e-26ed331e6d08",
                   "encryption": "none"
                 }
               ]
@@ -66,47 +66,17 @@
         "streamSettings": {
           "network": "xhttp",
           "xhttpSettings": {
-            "path": "/upload",
-            "mode": "packet-up",
-            "extra": {
-              "xmux": {
-                "maxConnections": "1-2",
-                "cMaxReuseTimes": 0,
-                "hMaxRequestTimes": "900-1400",
-                "hMaxReusableSecs": "3600-5400",
-                "hKeepAlivePeriod": 0
-              },
-              "downloadSettings": {
-                "address": "161.104.38.107",
-                "port": 443,
-                "network": "xhttp",
-                "security": "reality",
-                "realitySettings": {
-                  "fingerprint": "firefox",
-                  "serverName": "img.redbarn.ru",
-                  "publicKey": "yY6BKckWhkJ4r_5raufIumhtWHJIvqdPD7YFnznodlA",
-                  "shortId": "094b2db0737de9f4"
-                },
-                "xhttpSettings": {
-                  "path": "/upload",
-                  "xmux": {
-                    "maxConnections": "2-3",
-                    "cMaxReuseTimes": 0,
-                    "hMaxRequestTimes": "700-1100",
-                    "hMaxReusableSecs": "2700-4200",
-                    "hKeepAlivePeriod": 0
-                  }
-                }
-              }
-            }
+            "path": "/ccxf5snr06b8xxb6",
+            "host": "is-tw-relay.cdn.cachefleet.com",
+            "mode": "auto"
           },
-          "security": "reality",
-          "realitySettings": {
-            "serverName": "redbarn.ru",
-            "fingerprint": "firefox",
-            "publicKey": "yY6BKckWhkJ4r_5raufIumhtWHJIvqdPD7YFnznodlA",
-            "shortId": "6d06f5e94bbedd56",
-            "spiderX": ""
+          "security": "tls",
+          "tlsSettings": {
+            "serverName": "tansy-wharf.cdn.cachefleet.com",
+            "alpn": [
+              "h2"
+            ],
+            "fingerprint": "chrome"
           }
         }
       },
@@ -116,60 +86,26 @@
         "settings": {
           "vnext": [
             {
-              "address": "135.106.143.121",
+              "address": "admin.betust.net",
               "port": 443,
               "users": [
                 {
-                  "id": "af9d0c6e-0c74-003a-8275-05b4aa0f2ebe",
-                  "encryption": "none"
+                  "id": "95d0e214-eab0-4701-93ed-fea4f1b56062",
+                  "encryption": "none",
+                  "flow": "xtls-rprx-vision"
                 }
               ]
             }
           ]
         },
         "streamSettings": {
-          "network": "xhttp",
-          "xhttpSettings": {
-            "path": "/assets",
-            "mode": "packet-up",
-            "extra": {
-              "xmux": {
-                "maxConnections": "1-2",
-                "cMaxReuseTimes": 0,
-                "hMaxRequestTimes": "900-1400",
-                "hMaxReusableSecs": "3600-5400",
-                "hKeepAlivePeriod": 0
-              },
-              "downloadSettings": {
-                "address": "135.106.143.121",
-                "port": 443,
-                "network": "xhttp",
-                "security": "reality",
-                "realitySettings": {
-                  "fingerprint": "firefox",
-                  "serverName": "seo.alfastat.ru",
-                  "publicKey": "fz_xpZfQks3oa9c_d1OSokmTgmJuGbvFMkyK0Qt8w3I",
-                  "shortId": "75a0c0e236b0a436"
-                },
-                "xhttpSettings": {
-                  "path": "/assets",
-                  "xmux": {
-                    "maxConnections": "2-3",
-                    "cMaxReuseTimes": 0,
-                    "hMaxRequestTimes": "700-1100",
-                    "hMaxReusableSecs": "2700-4200",
-                    "hKeepAlivePeriod": 0
-                  }
-                }
-              }
-            }
-          },
+          "network": "tcp",
           "security": "reality",
           "realitySettings": {
-            "serverName": "alfastat.ru",
+            "serverName": "admin.betust.net",
             "fingerprint": "firefox",
-            "publicKey": "fz_xpZfQks3oa9c_d1OSokmTgmJuGbvFMkyK0Qt8w3I",
-            "shortId": "0066a7326f06d426",
+            "publicKey": "zZjrHRzULoXKVccVdPqtrtXLEUPJXwqdE1138vu5x3w",
+            "shortId": "3e137406",
             "spiderX": ""
           }
         }
@@ -180,60 +116,26 @@
         "settings": {
           "vnext": [
             {
-              "address": "135.106.143.121",
-              "port": 443,
+              "address": "200.96.106.2",
+              "port": 9889,
               "users": [
                 {
-                  "id": "af9d0c6e-0c74-0037-8275-05b4aa0f2ebe",
-                  "encryption": "none"
+                  "id": "0dcefe19-a42a-4d57-96be-83dcbffd425f",
+                  "encryption": "none",
+                  "flow": "xtls-rprx-vision"
                 }
               ]
             }
           ]
         },
         "streamSettings": {
-          "network": "xhttp",
-          "xhttpSettings": {
-            "path": "/assets",
-            "mode": "packet-up",
-            "extra": {
-              "xmux": {
-                "maxConnections": "1-2",
-                "cMaxReuseTimes": 0,
-                "hMaxRequestTimes": "900-1400",
-                "hMaxReusableSecs": "3600-5400",
-                "hKeepAlivePeriod": 0
-              },
-              "downloadSettings": {
-                "address": "135.106.143.121",
-                "port": 443,
-                "network": "xhttp",
-                "security": "reality",
-                "realitySettings": {
-                  "fingerprint": "firefox",
-                  "serverName": "seo.alfastat.ru",
-                  "publicKey": "fz_xpZfQks3oa9c_d1OSokmTgmJuGbvFMkyK0Qt8w3I",
-                  "shortId": "75a0c0e236b0a436"
-                },
-                "xhttpSettings": {
-                  "path": "/assets",
-                  "xmux": {
-                    "maxConnections": "2-3",
-                    "cMaxReuseTimes": 0,
-                    "hMaxRequestTimes": "700-1100",
-                    "hMaxReusableSecs": "2700-4200",
-                    "hKeepAlivePeriod": 0
-                  }
-                }
-              }
-            }
-          },
+          "network": "tcp",
           "security": "reality",
           "realitySettings": {
-            "serverName": "alfastat.ru",
+            "serverName": "tiktok2.transitbp2systems.com",
             "fingerprint": "firefox",
-            "publicKey": "fz_xpZfQks3oa9c_d1OSokmTgmJuGbvFMkyK0Qt8w3I",
-            "shortId": "0066a7326f06d426",
+            "publicKey": "GPwEGfRBoztNbcAvfX4ojY9FJ1vaMD3v21tnIrN2xyE",
+            "shortId": "",
             "spiderX": ""
           }
         }
@@ -244,60 +146,56 @@
         "settings": {
           "vnext": [
             {
-              "address": "161.104.38.107",
+              "address": "main.jarbook.net",
               "port": 443,
               "users": [
                 {
-                  "id": "af9d0c6e-0c74-0037-8275-05b4aa0f2ebe",
-                  "encryption": "none"
+                  "id": "95d0e214-eab0-4701-93ed-fea4f1b56062",
+                  "encryption": "none",
+                  "flow": "xtls-rprx-vision"
                 }
               ]
             }
           ]
         },
         "streamSettings": {
-          "network": "xhttp",
-          "xhttpSettings": {
-            "path": "/upload",
-            "mode": "packet-up",
-            "extra": {
-              "xmux": {
-                "maxConnections": "1-2",
-                "cMaxReuseTimes": 0,
-                "hMaxRequestTimes": "900-1400",
-                "hMaxReusableSecs": "3600-5400",
-                "hKeepAlivePeriod": 0
-              },
-              "downloadSettings": {
-                "address": "161.104.38.107",
-                "port": 443,
-                "network": "xhttp",
-                "security": "reality",
-                "realitySettings": {
-                  "fingerprint": "firefox",
-                  "serverName": "img.redbarn.ru",
-                  "publicKey": "yY6BKckWhkJ4r_5raufIumhtWHJIvqdPD7YFnznodlA",
-                  "shortId": "094b2db0737de9f4"
-                },
-                "xhttpSettings": {
-                  "path": "/upload",
-                  "xmux": {
-                    "maxConnections": "2-3",
-                    "cMaxReuseTimes": 0,
-                    "hMaxRequestTimes": "700-1100",
-                    "hMaxReusableSecs": "2700-4200",
-                    "hKeepAlivePeriod": 0
-                  }
-                }
-              }
-            }
-          },
+          "network": "tcp",
           "security": "reality",
           "realitySettings": {
-            "serverName": "redbarn.ru",
+            "serverName": "main.jarbook.net",
             "fingerprint": "firefox",
-            "publicKey": "yY6BKckWhkJ4r_5raufIumhtWHJIvqdPD7YFnznodlA",
-            "shortId": "6d06f5e94bbedd56",
+            "publicKey": "gJoMHh97teLxW92Z_3DI8qdSulqBlb9sW6mthYPEEBk",
+            "shortId": "d889ac17",
+            "spiderX": ""
+          }
+        }
+      },
+      {
+        "tag": "proxy-5",
+        "protocol": "vless",
+        "settings": {
+          "vnext": [
+            {
+              "address": "177.3.252.10",
+              "port": 443,
+              "users": [
+                {
+                  "id": "92b79c22-f68b-4713-8b21-52f264cb92f5",
+                  "encryption": "none",
+                  "flow": "xtls-rprx-vision"
+                }
+              ]
+            }
+          ]
+        },
+        "streamSettings": {
+          "network": "tcp",
+          "security": "reality",
+          "realitySettings": {
+            "serverName": "pl1.song69.fun",
+            "fingerprint": "firefox",
+            "publicKey": "5H_MmyfvF4SkwS84wTbLmtcZDecXJIJtZ3uisiKQpSM",
+            "shortId": "0c774b50",
             "spiderX": ""
           }
         }
