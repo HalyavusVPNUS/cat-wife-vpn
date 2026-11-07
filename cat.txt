@@ -52,6 +52,70 @@
         "settings": {
           "vnext": [
             {
+              "address": "135.106.143.121",
+              "port": 443,
+              "users": [
+                {
+                  "id": "af9d0c6e-0c74-003a-8275-05b4aa0f2ebe",
+                  "encryption": "none"
+                }
+              ]
+            }
+          ]
+        },
+        "streamSettings": {
+          "network": "xhttp",
+          "xhttpSettings": {
+            "path": "/assets",
+            "mode": "packet-up",
+            "extra": {
+              "xmux": {
+                "maxConnections": "1-2",
+                "cMaxReuseTimes": 0,
+                "hMaxRequestTimes": "900-1400",
+                "hMaxReusableSecs": "3600-5400",
+                "hKeepAlivePeriod": 0
+              },
+              "downloadSettings": {
+                "address": "135.106.143.121",
+                "port": 443,
+                "network": "xhttp",
+                "security": "reality",
+                "realitySettings": {
+                  "fingerprint": "firefox",
+                  "serverName": "seo.alfastat.ru",
+                  "publicKey": "fz_xpZfQks3oa9c_d1OSokmTgmJuGbvFMkyK0Qt8w3I",
+                  "shortId": "75a0c0e236b0a436"
+                },
+                "xhttpSettings": {
+                  "path": "/assets",
+                  "xmux": {
+                    "maxConnections": "2-3",
+                    "cMaxReuseTimes": 0,
+                    "hMaxRequestTimes": "700-1100",
+                    "hMaxReusableSecs": "2700-4200",
+                    "hKeepAlivePeriod": 0
+                  }
+                }
+              }
+            }
+          },
+          "security": "reality",
+          "realitySettings": {
+            "serverName": "alfastat.ru",
+            "fingerprint": "firefox",
+            "publicKey": "fz_xpZfQks3oa9c_d1OSokmTgmJuGbvFMkyK0Qt8w3I",
+            "shortId": "0066a7326f06d426",
+            "spiderX": ""
+          }
+        }
+      },
+      {
+        "tag": "proxy-2",
+        "protocol": "vless",
+        "settings": {
+          "vnext": [
+            {
               "address": "161.104.38.107",
               "port": 443,
               "users": [
@@ -111,7 +175,7 @@
         }
       },
       {
-        "tag": "proxy-2",
+        "tag": "proxy-3",
         "protocol": "vless",
         "settings": {
           "vnext": [
@@ -175,70 +239,6 @@
         }
       },
       {
-        "tag": "proxy-3",
-        "protocol": "vless",
-        "settings": {
-          "vnext": [
-            {
-              "address": "135.106.143.121",
-              "port": 443,
-              "users": [
-                {
-                  "id": "af9d0c6e-0c74-0037-8275-05b4aa0f2ebe",
-                  "encryption": "none"
-                }
-              ]
-            }
-          ]
-        },
-        "streamSettings": {
-          "network": "xhttp",
-          "xhttpSettings": {
-            "path": "/assets",
-            "mode": "packet-up",
-            "extra": {
-              "xmux": {
-                "maxConnections": "1-2",
-                "cMaxReuseTimes": 0,
-                "hMaxRequestTimes": "900-1400",
-                "hMaxReusableSecs": "3600-5400",
-                "hKeepAlivePeriod": 0
-              },
-              "downloadSettings": {
-                "address": "135.106.143.121",
-                "port": 443,
-                "network": "xhttp",
-                "security": "reality",
-                "realitySettings": {
-                  "fingerprint": "firefox",
-                  "serverName": "seo.alfastat.ru",
-                  "publicKey": "fz_xpZfQks3oa9c_d1OSokmTgmJuGbvFMkyK0Qt8w3I",
-                  "shortId": "75a0c0e236b0a436"
-                },
-                "xhttpSettings": {
-                  "path": "/assets",
-                  "xmux": {
-                    "maxConnections": "2-3",
-                    "cMaxReuseTimes": 0,
-                    "hMaxRequestTimes": "700-1100",
-                    "hMaxReusableSecs": "2700-4200",
-                    "hKeepAlivePeriod": 0
-                  }
-                }
-              }
-            }
-          },
-          "security": "reality",
-          "realitySettings": {
-            "serverName": "alfastat.ru",
-            "fingerprint": "firefox",
-            "publicKey": "fz_xpZfQks3oa9c_d1OSokmTgmJuGbvFMkyK0Qt8w3I",
-            "shortId": "0066a7326f06d426",
-            "spiderX": ""
-          }
-        }
-      },
-      {
         "tag": "proxy-4",
         "protocol": "vless",
         "settings": {
@@ -248,7 +248,7 @@
               "port": 443,
               "users": [
                 {
-                  "id": "af9d0c6e-0c74-003a-8275-05b4aa0f2ebe",
+                  "id": "af9d0c6e-0c74-0037-8275-05b4aa0f2ebe",
                   "encryption": "none"
                 }
               ]
@@ -425,66 +425,6 @@
         "settings": {
           "vnext": [
             {
-              "address": "83.141.67.164",
-              "port": 8443,
-              "users": [
-                {
-                  "id": "f4ef1d6a-8f01-4ccd-8547-5b5a2a572d00",
-                  "encryption": "none",
-                  "flow": "xtls-rprx-vision"
-                }
-              ]
-            }
-          ]
-        },
-        "streamSettings": {
-          "network": "tcp",
-          "security": "reality",
-          "realitySettings": {
-            "serverName": "360.yandex.ru",
-            "fingerprint": "firefox",
-            "publicKey": "qUq7a-iukyszVvH-5C74VBujzYAMC_shfv8O-1crZlY",
-            "shortId": "09fd8f6666eec544",
-            "spiderX": ""
-          }
-        }
-      },
-      {
-        "tag": "proxy-3",
-        "protocol": "vless",
-        "settings": {
-          "vnext": [
-            {
-              "address": "84.32.209.132",
-              "port": 443,
-              "users": [
-                {
-                  "id": "9f9c913b-0b78-4d14-a4db-560794cbc90f",
-                  "encryption": "none",
-                  "flow": "xtls-rprx-vision"
-                }
-              ]
-            }
-          ]
-        },
-        "streamSettings": {
-          "network": "tcp",
-          "security": "reality",
-          "realitySettings": {
-            "serverName": "litauto.plus-hit.ru",
-            "fingerprint": "firefox",
-            "publicKey": "N4UtYAhibzkb0n_U2Qmqze5-lZMQqDozqg7OCqvufGA",
-            "shortId": "7c8e3d4a9b1f26d3",
-            "spiderX": ""
-          }
-        }
-      },
-      {
-        "tag": "proxy-4",
-        "protocol": "vless",
-        "settings": {
-          "vnext": [
-            {
               "address": "pl-b1.golangwikito.cfd",
               "port": 61374,
               "users": [
@@ -514,7 +454,7 @@
         }
       },
       {
-        "tag": "proxy-5",
+        "tag": "proxy-3",
         "protocol": "vless",
         "settings": {
           "vnext": [
@@ -542,6 +482,70 @@
           "tlsSettings": {
             "serverName": "nl2-edge.gacvpn.site",
             "fingerprint": "firefox"
+          }
+        }
+      },
+      {
+        "tag": "proxy-4",
+        "protocol": "vless",
+        "settings": {
+          "vnext": [
+            {
+              "address": "84.32.209.132",
+              "port": 443,
+              "users": [
+                {
+                  "id": "9f9c913b-0b78-4d14-a4db-560794cbc90f",
+                  "encryption": "none",
+                  "flow": "xtls-rprx-vision"
+                }
+              ]
+            }
+          ]
+        },
+        "streamSettings": {
+          "network": "tcp",
+          "security": "reality",
+          "realitySettings": {
+            "serverName": "litauto.plus-hit.ru",
+            "fingerprint": "firefox",
+            "publicKey": "N4UtYAhibzkb0n_U2Qmqze5-lZMQqDozqg7OCqvufGA",
+            "shortId": "7c8e3d4a9b1f26d3",
+            "spiderX": ""
+          }
+        }
+      },
+      {
+        "tag": "proxy-5",
+        "protocol": "vless",
+        "settings": {
+          "vnext": [
+            {
+              "address": "art-media.live",
+              "port": 443,
+              "users": [
+                {
+                  "id": "acc50200-7f21-4f90-9cca-0057efcbf042",
+                  "encryption": "none"
+                }
+              ]
+            }
+          ]
+        },
+        "streamSettings": {
+          "network": "xhttp",
+          "xhttpSettings": {
+            "path": "/",
+            "host": "art-media.live",
+            "mode": "auto"
+          },
+          "security": "reality",
+          "realitySettings": {
+            "serverName": "art-media.live",
+            "fingerprint": "firefox",
+            "publicKey": "AJxMbMVTdXPGHeyla_rG9EW_ICt1nqAVdnCB6qnlrgU",
+            "shortId": "94289e3f4774195d",
+            "spiderX": ""
           }
         }
       },
