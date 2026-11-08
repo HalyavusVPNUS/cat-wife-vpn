@@ -267,11 +267,11 @@
         "settings": {
           "vnext": [
             {
-              "address": "5d0319t.nl7.h1clayd.click",
+              "address": "362c1eg.se1.h1clayd.click",
               "port": 443,
               "users": [
                 {
-                  "id": "cda0862a-0f87-4be9-8ed8-1d0c9e382839",
+                  "id": "632cd343-1e8f-4bf6-a9a2-20ada1f6970f",
                   "encryption": "none"
                 }
               ]
@@ -279,13 +279,14 @@
           ]
         },
         "streamSettings": {
-          "network": "tcp",
+          "network": "grpc",
+          "grpcSettings": {},
           "security": "reality",
           "realitySettings": {
-            "serverName": "5d0319t.nl7.h1clayd.click",
+            "serverName": "362c1eg.se1.h1clayd.click",
             "fingerprint": "firefox",
-            "publicKey": "l-GzBDuNuhnjxoRlZqKvT7jAt_sbVAxhGFsAttO5kXs",
-            "shortId": "361d0dd59c70516f",
+            "publicKey": "BLhS7fE4Yh6kAADw7yRIn2PzKun-JDagJHJNOePYRSY",
+            "shortId": "bee802ae4ab66496",
             "spiderX": ""
           }
         }
@@ -296,11 +297,11 @@
         "settings": {
           "vnext": [
             {
-              "address": "45.86.67.114",
-              "port": 8443,
+              "address": "212.69.86.159",
+              "port": 8447,
               "users": [
                 {
-                  "id": "6eaf5e8f-e4fe-4dc7-a1cd-f24343536abe",
+                  "id": "52030136-eee3-4675-baae-a50f17b2bb8b",
                   "encryption": "none"
                 }
               ]
@@ -310,14 +311,14 @@
         "streamSettings": {
           "network": "grpc",
           "grpcSettings": {
-            "serviceName": "us-tor"
+            "serviceName": "grpc"
           },
           "security": "reality",
           "realitySettings": {
-            "serverName": "us1.kittieslabs.tech",
-            "fingerprint": "firefox",
-            "publicKey": "vzxQR7aijDhEEV2Dq6P6eFJckkgOLTq86bySpqVGsQo",
-            "shortId": "de9061cbed448be3",
+            "serverName": "github.com",
+            "fingerprint": "chrome",
+            "publicKey": "Pe1-DgXHoB_IGysYKHHhjppQD88mHkzYkqISdSXQxT4",
+            "shortId": "732ef4f5320b5e19",
             "spiderX": ""
           }
         }
@@ -328,11 +329,43 @@
         "settings": {
           "vnext": [
             {
-              "address": "rapira-dof.whitenw.net",
-              "port": 8445,
+              "address": "141.193.213.20",
+              "port": 8443,
               "users": [
                 {
-                  "id": "cd138479-c87a-4d4c-b6ea-4beeb6ef2b47",
+                  "id": "8f317272-36ed-4235-9c19-94c5a4dc9d21",
+                  "encryption": "none"
+                }
+              ]
+            }
+          ]
+        },
+        "streamSettings": {
+          "network": "ws",
+          "wsSettings": {
+            "path": "/",
+            "headers": {
+              "Host": "gem.hilaxjenu.cv"
+            }
+          },
+          "security": "tls",
+          "tlsSettings": {
+            "serverName": "gem.hilaxjenu.cv",
+            "fingerprint": "firefox"
+          }
+        }
+      },
+      {
+        "tag": "proxy-4",
+        "protocol": "vless",
+        "settings": {
+          "vnext": [
+            {
+              "address": "82.148.247.24",
+              "port": 443,
+              "users": [
+                {
+                  "id": "16f5041e-7a72-44a0-afbf-744ec2bf1cc9",
                   "encryption": "none",
                   "flow": "xtls-rprx-vision"
                 }
@@ -344,44 +377,10 @@
           "network": "tcp",
           "security": "reality",
           "realitySettings": {
-            "serverName": "passport.yandex.ru",
+            "serverName": "nl1.xshoponline.ru",
             "fingerprint": "firefox",
-            "publicKey": "l06r0clkHjHk7HRGpkDBJwZ1JJscSqfwHUQOrV3v3hQ",
-            "shortId": "",
-            "spiderX": ""
-          }
-        }
-      },
-      {
-        "tag": "proxy-4",
-        "protocol": "vless",
-        "settings": {
-          "vnext": [
-            {
-              "address": "cz.pythonmakemigreat.wiki",
-              "port": 61374,
-              "users": [
-                {
-                  "id": "f8d52ece-fad4-478d-875d-df6eed3befa7",
-                  "encryption": "none"
-                }
-              ]
-            }
-          ]
-        },
-        "streamSettings": {
-          "network": "xhttp",
-          "xhttpSettings": {
-            "path": "/",
-            "host": "cz.pythonmakemigreat.wiki",
-            "mode": "packet-up"
-          },
-          "security": "reality",
-          "realitySettings": {
-            "serverName": "cz.pythonmakemigreat.wiki",
-            "fingerprint": "chrome",
-            "publicKey": "QrNs0ew7snHqLfpVXS9RAhlRzgAzzGZK9fXmDcx9xHI",
-            "shortId": "",
+            "publicKey": "zZvOJ5dL9qvOjzg4u6f_Zo2j37cM6HOnOeUG02kcKCQ",
+            "shortId": "5c3639b7",
             "spiderX": ""
           }
         }
@@ -392,11 +391,11 @@
         "settings": {
           "vnext": [
             {
-              "address": "yoy-api.bachidze.com",
+              "address": "168.113.190.113",
               "port": 443,
               "users": [
                 {
-                  "id": "3bb97d46-789b-4229-88f6-9beb222a4137",
+                  "id": "45ef6d0c-df92-4328-afa3-d6af1806fb3c",
                   "encryption": "none",
                   "flow": "xtls-rprx-vision"
                 }
@@ -408,10 +407,10 @@
           "network": "tcp",
           "security": "reality",
           "realitySettings": {
-            "serverName": "yoy-api.bachidze.com",
-            "fingerprint": "chrome",
-            "publicKey": "ZJlfiMh4ebjrTl2_kwAk_zXMAaCiwNS7yMd5XzlUgmI",
-            "shortId": "",
+            "serverName": "13.143.195.113.sslip.io",
+            "fingerprint": "firefox",
+            "publicKey": "p0M6RumtfcATPNPUIFnFcgWy2rzk2gGVWx21sql1hV0",
+            "shortId": "8238d76df92c2560",
             "spiderX": ""
           }
         }
