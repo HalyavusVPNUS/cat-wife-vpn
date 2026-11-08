@@ -25,6 +25,7 @@ SOURCES = [
         # добор непроверенными выключен: в JSON идут только стабильные конфиги
         "fill_unverified": False,
         "limit": 10,                # конфигов в JSON
+        # allowed_countries нет: берём все страны
     },
     {
         "name": "okeania",
@@ -37,6 +38,16 @@ SOURCES = [
         # и пропускался, поэтому добираем непроверенными (при открытом TCP-порте).
         "fill_unverified": True,
         "limit": 5,                 # конфигов в JSON
+        # allowed_countries нет: берём все страны
+    },
+    {
+        "name": "unlisted",
+        "title": "🇨🇳 Китай #1",
+        "url": "https://clck.ly/3WnEfT",
+        "reject_russian_flag": False,
+        # добор непроверенными выключен: в JSON идут только стабильные конфиги
+        "fill_unverified": False,
+        "limit": 10,                # конфигов в JSON
         # allowed_countries нет: берём все страны
     },
 ]
