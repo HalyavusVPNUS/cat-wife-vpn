@@ -18,19 +18,14 @@ from pathlib import Path
 
 SOURCES = [
     {
-        "name": "fixnet",
+        "name": "buffetbarko",
         "title": "🇰🇵 Северная корея #1",
-        "url": "https://raw.githubusercontent.com/HalyavusVPNUS/cat-wife-vpn/refs/heads/main/Fixnet.gg",
+        "url": "https://raw.githubusercontent.com/Buffetbarko/Universal-Proxy-Config-Parser-/main/blacklist_vpn.txt",
         "reject_russian_flag": False,
-        # xhttp-конфиги sing-box проверить не может, поэтому берём их без проверки
-        # (при открытом TCP-порте). Выбор рабочего делает balancer в Happ.
-        "fill_unverified": True,
+        # добор непроверенными выключен: в JSON идут только стабильные конфиги
+        "fill_unverified": False,
         "limit": 10,                # конфигов в JSON
-        # только Латвия и Швеция (по флагу или названию страны в имени конфига)
-        "allowed_countries": [
-            "🇱🇻", "latvia", "латвия", "латвии",
-            "🇸🇪", "sweden", "швеция", "швеции",
-        ],
+        # allowed_countries нет: берём все страны
     },
     {
         "name": "okeania",
