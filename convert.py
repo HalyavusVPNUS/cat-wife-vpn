@@ -50,6 +50,16 @@ SOURCES = [
         "limit": 10,                # конфигов в JSON
         # allowed_countries нет: берём все страны
     },
+    {
+        "name": "goose",
+        "title": "🇨🇳 Китай #2",
+        "url": "https://raw.githubusercontent.com/HalyavusVPNUS/bubaleti/refs/heads/main/vless.txt",
+        "reject_russian_flag": False,
+        # добор непроверенными выключен: в JSON идут только стабильные конфиги
+        "fill_unverified": False,
+        "limit": 10,                # конфигов в JSON
+        # allowed_countries нет: берём все страны
+ },
 ]
 
 OUTPUT_FILE = Path("cat.txt")
