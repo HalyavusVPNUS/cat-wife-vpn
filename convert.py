@@ -55,11 +55,11 @@ SOURCES = [
         "title": "🇨🇳 Китай #2",
         "url": "https://raw.githubusercontent.com/HalyavusVPNUS/bubaleti/refs/heads/main/vless.txt",
         "reject_russian_flag": False,
-        # добор непроверенными выключен: в JSON идут только стабильные конфиги
-        "fill_unverified": False,
-        "limit": 10,                # конфигов в JSON
+        # БЕЗ проверки стабильности: просто первые 5 конфигов из подписки
+        # (по порядку, как они лежат в файле)
+        "first_n": 5,
         # allowed_countries нет: берём все страны
- },
+    },
 ]
 
 OUTPUT_FILE = Path("cat.txt")
@@ -1059,6 +1059,38 @@ def uri_endpoint(uri):
         return None, None
 
 
+def take_first_n(source, candidates, n, allow_hysteria):
+    """Без каких-либо проверок: первые n конфигов подписки по порядку.
+    Пропускаются только дубли, заглушки (127.0.0.1 и т.п.) и ссылки,
+    которые нельзя превратить в xray-JSON (иначе в профиле было бы меньше n)."""
+    selected = []
+    seen = set()
+
+    for uri in candidates:
+        key = dedupe_key(uri)
+        if key in seen:
+            continue
+
+        host, _ = uri_endpoint(uri)
+        if not host or host.startswith("127.") or host in {"0.0.0.0", "localhost"}:
+            continue
+
+        if make_xray_outbound(uri, "check", allow_hysteria) is None:
+            continue
+
+        seen.add(key)
+        selected.append(uri)
+
+        if len(selected) >= n:
+            break
+
+    print(
+        f"{source['name']}: first_n mode, took first {len(selected)} configs "
+        f"without any checks (wanted {n})"
+    )
+    return selected
+
+
 def get_working(source):
     # None = без ограничений
     if UNLIMITED:
@@ -1095,6 +1127,11 @@ def get_working(source):
             f"{source['name']}: country filter kept "
             f"{len(candidates)} of {before} links"
         )
+
+    # режим «первые N без проверки»: ничего не тестируем и не сортируем
+    first_n = source.get("first_n")
+    if first_n:
+        return take_first_n(source, candidates, first_n, allow_hysteria)
 
     jobs = []          # (index, uri, outbound | None)
     seen = set()
