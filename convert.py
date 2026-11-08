@@ -18,10 +18,9 @@ from pathlib import Path
 
 SOURCES = [
     {
-        "name": "buffetbarko",
+        "name": "Akres",
         "title": "🇰🇵 Северная корея #1",
-        "url": "https://raw.githubusercontent.com/Buffetbarko/Universal-Proxy-Config-Parser-/main/blacklist_vpn.txt",
-        "reject_russian_flag": False,
+        "url": "https://github.com/theakres/VPN/raw/main/all": False,
         # добор непроверенными выключен: в JSON идут только стабильные конфиги
         "fill_unverified": False,
         "limit": 10,                # конфигов в JSON
