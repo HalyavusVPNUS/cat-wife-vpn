@@ -18,13 +18,13 @@ from pathlib import Path
 
 SOURCES = [
     {
-        "name": "Akres",
+        "name": "buffetbarko",
         "title": "🇰🇵 Северная корея #1",
-        "url": "https://github.com/theakres/VPN/raw/main/all": False,
+        "url": "https://github.com/theakres/VPN/raw/main/all",
+        "reject_russian_flag": False,
         # добор непроверенными выключен: в JSON идут только стабильные конфиги
         "fill_unverified": False,
         "limit": 10,                # конфигов в JSON
-        # allowed_countries нет: берём все страны
     },
     {
         "name": "okeania",
