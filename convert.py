@@ -60,6 +60,18 @@ SOURCES = [
         "first_n": 5,
         # allowed_countries нет: берём все страны
     },
+    {
+        "name": "veda",
+        "title": "🇮🇷 Иран #1",
+        "url": "https://app.veda.beer/desertalnt",
+        "reject_russian_flag": False,
+        # Если с раннера GitHub конфиги не проходят проверку, JSON был бы пустым
+        # и пропускался, поэтому добираем непроверенными (при открытом TCP-порте).
+        # Хочешь только стабильные: поставь False.
+        "fill_unverified": True,
+        "limit": 10,                # конфигов в JSON
+        # allowed_countries нет: берём все страны
+    },
 ]
 
 OUTPUT_FILE = Path("cat.txt")
