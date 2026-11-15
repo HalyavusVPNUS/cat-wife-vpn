@@ -55,16 +55,6 @@ SOURCES = [
         # allowed_countries нет: остальные страны берём все
     },
     {
-        "name": "goose",
-        "title": "🇨🇳 Китай #2",
-        "url": "https://raw.githubusercontent.com/HalyavusVPNUS/bubaleti/refs/heads/main/vless.txt",
-        "reject_russian_flag": False,
-        # БЕЗ проверки стабильности: просто первые 5 конфигов из подписки
-        # (по порядку, как они лежат в файле)
-        "first_n": 5,
-        # allowed_countries нет: берём все страны
-    },
-    {
         "name": "Fixnet",
         "title": "🇮🇷 Иран #1",
         "url": "https://raw.githubusercontent.com/HalyavusVPNUS/cat-wife-vpn/refs/heads/main/Fixnet",
@@ -74,18 +64,25 @@ SOURCES = [
         # Хочешь только стабильные: поставь False.
         "fill_unverified": True,
         "limit": 10,                # конфигов в JSON
+        # берём ТОЛЬКО эти страны (коды ISO): Латвия и Швеция
+        "only_countries": {"LV", "SE"},
+    },
+    {
+        "name": "Rick i Morty",
+        "title": "🇮🇷 Иран #2",
+        "url": "https://gitverse.ru/api/repos/europe_vpn/vpn_sub/raw/branch/master/config.txt",
+        "reject_russian_flag": False,
+        "fill_unverified": True,
+        "limit": 10,                # конфигов в JSON
         # allowed_countries нет: берём все страны
     },
     {
-        "name": "RickAndMorty",
-        "title": "🇮🇷 Иран #2",
-        "url": "https://raw.githubusercontent.com/Fakeonomics/libre-configs/gh-pages/special/minis",
+        "name": "Martusran",
+        "title": "🇬🇧 Остров Эпштейна #1",
+        "url": "https://clck.ly/3WnEfT",
         "reject_russian_flag": False,
-        # Если с раннера GitHub конфиги не проходят проверку, JSON был бы пустым
-        # и пропускался, поэтому добираем непроверенными (при открытом TCP-порте).
-        # Хочешь только стабильные: поставь False.
         "fill_unverified": True,
-        "limit": 5,                # конфигов в JSON
+        "limit": 7,                 # конфигов в JSON
         # allowed_countries нет: берём все страны
     },
 ]
@@ -1067,13 +1064,25 @@ def uri_countries(uri, geo):
     return codes
 
 
+def source_has_country_rules(source):
+    return bool(
+        source.get("excluded_countries")
+        or source.get("country_caps")
+        or source.get("only_countries")
+    )
+
+
 def rules_accept(source, uri, geo, counts):
-    """Проверяет правила стран источника: excluded_countries и country_caps.
-    Если конфиг подходит, учитывает его в counts и возвращает True."""
+    """Проверяет правила стран источника: only_countries, excluded_countries
+    и country_caps. Если конфиг подходит, учитывает его в counts и возвращает True."""
+    only = source.get("only_countries") or set()
     excluded = source.get("excluded_countries") or set()
     caps = source.get("country_caps") or {}
 
     codes = uri_countries(uri, geo)
+
+    if only and not (codes & set(only)):
+        return False
 
     if codes & set(excluded):
         return False
@@ -1107,10 +1116,11 @@ def apply_country_rules(source, ordered_uris, geo, limit, counts=None):
         else:
             dropped += 1
 
-    if dropped and (source.get("excluded_countries") or source.get("country_caps")):
+    if dropped and source_has_country_rules(source):
         print(
             f"{source['name']}: country rules skipped {dropped} configs "
-            f"(excluded {sorted(source.get('excluded_countries') or [])}, "
+            f"(only {sorted(source.get('only_countries') or [])}, "
+            f"excluded {sorted(source.get('excluded_countries') or [])}, "
             f"caps {source.get('country_caps') or {}})"
         )
 
@@ -1262,6 +1272,22 @@ def get_working(source):
             f"kept {len(candidates)} of {before} links"
         )
 
+    # «только эти страны»: определяем страну каждого кандидата (название + IP)
+    # и оставляем только подходящие, ещё до тестирования
+    only = source.get("only_countries")
+
+    if only:
+        before = len(candidates)
+        geo_pre = geolocate({uri_endpoint(item)[0] for item in candidates})
+        candidates = [
+            item for item in candidates
+            if uri_countries(item, geo_pre) & set(only)
+        ]
+        print(
+            f"{source['name']}: only countries {sorted(only)}, "
+            f"kept {len(candidates)} of {before} links"
+        )
+
     # режим «первые N без проверки»: ничего не тестируем и не сортируем
     first_n = source.get("first_n")
     if first_n:
@@ -1348,9 +1374,7 @@ def get_working(source):
     # набрали лимит стабильных: конфиги из конца подписки тогда не тестируются
     # (при правилах стран пачками не останавливаемся: часть прошедших может
     # отсеяться по стране, поэтому проверяем всё)
-    has_country_rules = bool(
-        source.get("excluded_countries") or source.get("country_caps")
-    )
+    has_country_rules = source_has_country_rules(source)
 
     if prefer_order and limit is not None and not has_country_rules:
         batch_size = WORKERS * 2
@@ -1443,8 +1467,9 @@ def get_working(source):
             f"runner {latency:.2f}s  {host}"
         )
 
-    # правила стран (исключённые страны, лимиты на страну) применяются
-    # к уже отсортированному списку: берём лучшие подходящие, пока не наберём limit
+    # правила стран (только нужные страны, исключённые, лимиты на страну)
+    # применяются к уже отсортированному списку: берём лучшие подходящие,
+    # пока не наберём limit
     country_counts = {}
     selected = apply_country_rules(
         source, [uri for _, uri, _ in passed], geo, limit, country_counts
