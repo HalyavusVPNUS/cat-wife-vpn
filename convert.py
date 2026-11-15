@@ -67,13 +67,25 @@ SOURCES = [
     {
         "name": "Fixnet",
         "title": "🇮🇷 Иран #1",
-        "url": "https://gidroksi.fun/msub/s",
+        "url": "https://raw.githubusercontent.com/HalyavusVPNUS/cat-wife-vpn/refs/heads/main/Fixnet",
         "reject_russian_flag": False,
         # Если с раннера GitHub конфиги не проходят проверку, JSON был бы пустым
         # и пропускался, поэтому добираем непроверенными (при открытом TCP-порте).
         # Хочешь только стабильные: поставь False.
         "fill_unverified": True,
         "limit": 10,                # конфигов в JSON
+        # allowed_countries нет: берём все страны
+    },
+    {
+        "name": "RickAndMorty",
+        "title": "🇮🇷 Иран #2",
+        "url": "https://raw.githubusercontent.com/Fakeonomics/libre-configs/gh-pages/special/minis",
+        "reject_russian_flag": False,
+        # Если с раннера GitHub конфиги не проходят проверку, JSON был бы пустым
+        # и пропускался, поэтому добираем непроверенными (при открытом TCP-порте).
+        # Хочешь только стабильные: поставь False.
+        "fill_unverified": True,
+        "limit": 5,                # конфигов в JSON
         # allowed_countries нет: берём все страны
     },
 ]
