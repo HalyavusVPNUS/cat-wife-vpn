@@ -47,8 +47,12 @@ SOURCES = [
         "reject_russian_flag": False,
         # добор непроверенными выключен: в JSON идут только стабильные конфиги
         "fill_unverified": False,
-        "limit": 10,                # конфигов в JSON
-        # allowed_countries нет: берём все страны
+        "limit": 10,                # конфигов в JSON (все рабочие, но не больше 10)
+        # страны, которые НИКОГДА не берём (коды ISO): Латвия и Россия
+        "excluded_countries": {"LV", "RU"},
+        # максимум конфигов из страны: Швеция только один
+        "country_caps": {"SE": 1},
+        # allowed_countries нет: остальные страны берём все
     },
     {
         "name": "goose",
@@ -123,6 +127,13 @@ GEO_BUCKET_MS = 25   # конфиги в пределах 25 мс считаем
 URI_RE = re.compile(r"""(?i)(?:vless|hysteria2|hy2)://[^\s<>"'`]+""")
 # построчный разбор: строка целиком, включая кавычки внутри (JSON в параметре extra)
 LINE_URI_RE = re.compile(r"(?im)^\s*((?:vless|hysteria2|hy2)://\S+)\s*$")
+
+# слова в названии конфига, по которым определяем страну (дополнительно к флагу-эмодзи)
+COUNTRY_WORDS = {
+    "LV": ["latvia", "latvija", "латви"],
+    "RU": ["russia", "russian federation", "росси"],
+    "SE": ["sweden", "sverige", "швеци"],
+}
 
 USER_AGENTS = [
     "sing-box/1.14.4",
@@ -1010,6 +1021,90 @@ def geo_bucket(uri, geo):
     return round(est / GEO_BUCKET_MS)
 
 
+# ------------------------------------------------------ country rules
+
+def uri_countries(uri, geo):
+    """Множество кодов стран конфига: по флагу/названию (часть после #)
+    и по геолокации IP сервера (если она есть в geo)."""
+    fragment = urllib.parse.unquote(
+        html.unescape(urllib.parse.urlsplit(uri).fragment)
+    )
+    codes = set()
+
+    # флаги-эмодзи: пара региональных индикаторов = код страны
+    indicators = [
+        chr(ord(ch) - 0x1F1E6 + ord("A"))
+        for ch in fragment
+        if 0x1F1E6 <= ord(ch) <= 0x1F1FF
+    ]
+    for i in range(0, len(indicators) - 1, 2):
+        codes.add(indicators[i] + indicators[i + 1])
+
+    # названия стран словами
+    low = fragment.lower()
+    for code, words in COUNTRY_WORDS.items():
+        if any(word in low for word in words):
+            codes.add(code)
+
+    # страна по IP сервера
+    host, _ = uri_endpoint(uri)
+    info = geo.get(host)
+    if info and info[2] and info[2] != "??":
+        codes.add(info[2].upper())
+
+    return codes
+
+
+def rules_accept(source, uri, geo, counts):
+    """Проверяет правила стран источника: excluded_countries и country_caps.
+    Если конфиг подходит, учитывает его в counts и возвращает True."""
+    excluded = source.get("excluded_countries") or set()
+    caps = source.get("country_caps") or {}
+
+    codes = uri_countries(uri, geo)
+
+    if codes & set(excluded):
+        return False
+
+    for code, cap in caps.items():
+        if code in codes and counts.get(code, 0) >= cap:
+            return False
+
+    for code in caps:
+        if code in codes:
+            counts[code] = counts.get(code, 0) + 1
+
+    return True
+
+
+def apply_country_rules(source, ordered_uris, geo, limit, counts=None):
+    """Идёт по списку в порядке приоритета и берёт подходящие, пока не наберёт limit
+    (limit=None = без ограничения по количеству)."""
+    if counts is None:
+        counts = {}
+
+    selected = []
+    dropped = 0
+
+    for uri in ordered_uris:
+        if limit is not None and len(selected) >= limit:
+            break
+
+        if rules_accept(source, uri, geo, counts):
+            selected.append(uri)
+        else:
+            dropped += 1
+
+    if dropped and (source.get("excluded_countries") or source.get("country_caps")):
+        print(
+            f"{source['name']}: country rules skipped {dropped} configs "
+            f"(excluded {sorted(source.get('excluded_countries') or [])}, "
+            f"caps {source.get('country_caps') or {}})"
+        )
+
+    return selected
+
+
 # ---------------------------------------------------------- selection
 
 def matches_country(uri, markers):
@@ -1140,6 +1235,21 @@ def get_working(source):
             f"{len(candidates)} of {before} links"
         )
 
+    # быстрый отсев исключённых стран по названию конфига (до тестирования,
+    # чтобы не тратить время на заведомо ненужные). Страну по IP проверим позже
+    excluded = source.get("excluded_countries")
+
+    if excluded:
+        before = len(candidates)
+        candidates = [
+            item for item in candidates
+            if not (uri_countries(item, {}) & set(excluded))
+        ]
+        print(
+            f"{source['name']}: excluded countries {sorted(excluded)} by name, "
+            f"kept {len(candidates)} of {before} links"
+        )
+
     # режим «первые N без проверки»: ничего не тестируем и не сортируем
     first_n = source.get("first_n")
     if first_n:
@@ -1224,7 +1334,13 @@ def get_working(source):
 
     # prefer_order: проверяем пачками по порядку и останавливаемся, как только
     # набрали лимит стабильных: конфиги из конца подписки тогда не тестируются
-    if prefer_order and limit is not None:
+    # (при правилах стран пачками не останавливаемся: часть прошедших может
+    # отсеяться по стране, поэтому проверяем всё)
+    has_country_rules = bool(
+        source.get("excluded_countries") or source.get("country_caps")
+    )
+
+    if prefer_order and limit is not None and not has_country_rules:
         batch_size = WORKERS * 2
         batches = [
             testable[i:i + batch_size] for i in range(0, len(testable), batch_size)
@@ -1265,7 +1381,12 @@ def get_working(source):
                     kind = reason.split(":")[0][:30]
                     reasons[kind] = reasons.get(kind, 0) + 1
 
-            if prefer_order and limit is not None and len(passed) >= limit:
+            if (
+                prefer_order
+                and limit is not None
+                and not has_country_rules
+                and len(passed) >= limit
+            ):
                 not_tested = sum(len(b) for b in batches[batch_no + 1:])
                 break
 
@@ -1310,10 +1431,12 @@ def get_working(source):
             f"runner {latency:.2f}s  {host}"
         )
 
-    if limit is None:
-        selected = [uri for _, uri, _ in passed]
-    else:
-        selected = [uri for _, uri, _ in passed[:limit]]
+    # правила стран (исключённые страны, лимиты на страну) применяются
+    # к уже отсортированному списку: берём лучшие подходящие, пока не наберём limit
+    country_counts = {}
+    selected = apply_country_rules(
+        source, [uri for _, uri, _ in passed], geo, limit, country_counts
+    )
 
     verified = len(selected)
 
@@ -1323,7 +1446,9 @@ def get_working(source):
         if INCLUDE_UNTESTABLE:
             for index, uri, _ in untestable:
                 host, port = uri_endpoint(uri)
-                if tcp_open(host, port):
+                if tcp_open(host, port) and rules_accept(
+                    source, uri, geo, country_counts
+                ):
                     print(f"{source['name']} #{index}: UNTESTABLE (tcp open, added)")
                     selected.append(uri)
 
@@ -1363,9 +1488,14 @@ def get_working(source):
             key=lambda entry: (geo_bucket(entry[1][1], geo_fill), entry[0])
         )
 
+        geo_all = {**geo, **geo_fill}
+
         for rtt, (index, uri) in ranked:
             if len(selected) >= limit:
                 break
+
+            if not rules_accept(source, uri, geo_all, country_counts):
+                continue
 
             print(
                 f"{source['name']} #{index}: UNVERIFIED "
