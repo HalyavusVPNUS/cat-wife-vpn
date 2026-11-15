@@ -18,7 +18,7 @@ from pathlib import Path
 
 SOURCES = [
     {
-        "name": "buffetbarko",
+        "name": "Theakres",
         "title": "🇰🇵 Северная корея #1",
         "url": "https://github.com/theakres/VPN/raw/main/all",
         "reject_russian_flag": False,
@@ -28,9 +28,9 @@ SOURCES = [
         # allowed_countries нет: берём все страны
     },
     {
-        "name": "okeania",
+        "name": "Vsem",
         "title": "🇰🇵 Северная корея #2",
-        "url": "https://raw.githubusercontent.com/HalyavusVPNUS/vless-subscription/refs/heads/main/hysteria.txt",
+        "url": "https://clck.ru/3VbV3Z#Vsem",
         "reject_russian_flag": False,
         "allow_hysteria": True,
         # В файле лежат vless-конфиги (в т.ч. «белые списки» и xhttp), которые
@@ -41,9 +41,9 @@ SOURCES = [
         # allowed_countries нет: берём все страны
     },
     {
-        "name": "unlisted",
+        "name": "Frankenstein",
         "title": "🇨🇳 Китай #1",
-        "url": "https://clck.ly/3WnEfT",
+        "url": "https://raw.githubusercontent.com/korol5028/korol-vpn/main/Pohyu.txt",
         "reject_russian_flag": False,
         # добор непроверенными выключен: в JSON идут только стабильные конфиги
         "fill_unverified": False,
@@ -61,9 +61,9 @@ SOURCES = [
         # allowed_countries нет: берём все страны
     },
     {
-        "name": "veda",
+        "name": "Fixnet",
         "title": "🇮🇷 Иран #1",
-        "url": "https://app.veda.beer/desertalnt",
+        "url": "https://gidroksi.fun/msub/s",
         "reject_russian_flag": False,
         # Если с раннера GitHub конфиги не проходят проверку, JSON был бы пустым
         # и пропускался, поэтому добираем непроверенными (при открытом TCP-порте).
