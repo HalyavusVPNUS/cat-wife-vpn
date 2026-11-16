@@ -16,6 +16,20 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+# Конфиги для источника Fixnet: вставлены прямо в скрипт (по одному на строку).
+# Чтобы обновить: замени строки между кавычками.
+FIXNET_CONFIGS = r"""
+vless://d67ead25-b5d4-002e-b2fc-839ea07adcec@135.106.143.116:443?flow=&encryption=none&type=xhttp&host=&path=/static&mode=packet-up&extra={"xmux":{"maxConnections":"2-3","cMaxReuseTimes":0,"hMaxRequestTimes":"700-1100","hMaxReusableSecs":"2700-4200","hKeepAlivePeriod":0}}&security=reality&fp=firefox&sni=upgradecraft.com&pbk=YHPoUNxsml4z6pYt-7djOb1lqnBjxCk4-2mk84pveyc&sid=bc0e11171a0edd80#🇷🇺 Россия №50?serverDescription=WW91dHViZSDQsdC10Lcg0YDQtdC60LvQsNC80Ys=
+vless://d67ead25-b5d4-0024-b2fc-839ea07adcec@135.106.143.116:443?flow=&encryption=none&type=xhttp&host=&path=/static&mode=packet-up&extra={"xmux":{"maxConnections":"2-3","cMaxReuseTimes":0,"hMaxRequestTimes":"700-1100","hMaxReusableSecs":"2700-4200","hKeepAlivePeriod":0}}&security=reality&fp=firefox&sni=upgradecraft.com&pbk=YHPoUNxsml4z6pYt-7djOb1lqnBjxCk4-2mk84pveyc&sid=bc0e11171a0edd80#🇸🇪 Швеция №50?serverDescription=VGVsZWdyYW0sIENoYXRHUFQsIEdlbWluaQ==
+vless://d67ead25-b5d4-0037-b2fc-839ea07adcec@135.106.143.116:443?flow=&encryption=none&type=xhttp&host=&path=/static&mode=packet-up&extra={"xmux":{"maxConnections":"2-3","cMaxReuseTimes":0,"hMaxRequestTimes":"700-1100","hMaxReusableSecs":"2700-4200","hKeepAlivePeriod":0}}&security=reality&fp=firefox&sni=upgradecraft.com&pbk=YHPoUNxsml4z6pYt-7djOb1lqnBjxCk4-2mk84pveyc&sid=bc0e11171a0edd80#🇱🇻 Латвия №50?serverDescription=VGVsZWdyYW0sIENoYXRHUFQsIEdlbWluaQ==
+vless://d67ead25-b5d4-002e-b2fc-839ea07adcec@94.228.127.120:443?flow=&type=xhttp&host=&path=/assets&mode=packet-up&extra={"xmux":{"cMaxReuseTimes": 0,"hKeepAlivePeriod": 0,"hMaxRequestTimes": "600-900","hMaxReusableSecs": "1800-3000","maxConnections": 2}}&security=reality&fp=firefox&sni=telemarket24.ru&pbk=v9tF85wX9dQoGwOodiphRBkXz2Rt5FB4Yc2EKRpBcRA&sid=d748bf8189426958#🇷🇺 Россия №59?serverDescription=WW91dHViZSDQsdC10Lcg0YDQtdC60LvQsNC80Ys=
+vless://d67ead25-b5d4-003a-b2fc-839ea07adcec@94.228.127.120:443?flow=&type=xhttp&host=&path=/assets&mode=packet-up&extra={"xmux":{"cMaxReuseTimes": 0,"hKeepAlivePeriod": 0,"hMaxRequestTimes": "600-900","hMaxReusableSecs": "1800-3000","maxConnections": 2}}&security=reality&fp=firefox&sni=telemarket24.ru&pbk=v9tF85wX9dQoGwOodiphRBkXz2Rt5FB4Yc2EKRpBcRA&sid=d748bf8189426958#🇸🇪 Швеция №59?serverDescription=VGVsZWdyYW0sIENoYXRHUFQsIEdlbWluaQ==
+vless://d67ead25-b5d4-0037-b2fc-839ea07adcec@94.228.127.120:443?flow=&type=xhttp&host=&path=/assets&mode=packet-up&extra={"xmux":{"cMaxReuseTimes": 0,"hKeepAlivePeriod": 0,"hMaxRequestTimes": "600-900","hMaxReusableSecs": "1800-3000","maxConnections": 2}}&security=reality&fp=firefox&sni=telemarket24.ru&pbk=v9tF85wX9dQoGwOodiphRBkXz2Rt5FB4Yc2EKRpBcRA&sid=d748bf8189426958#🇱🇻 Латвия №59?serverDescription=VGVsZWdyYW0sIENoYXRHUFQsIEdlbWluaQ==
+vless://d67ead25-b5d4-002e-b2fc-839ea07adcec@136.234.9.66:443?flow=&type=xhttp&host=&path=/repository&mode=packet-up&extra={"xmux":{"cMaxReuseTimes": 0,"hKeepAlivePeriod": 0,"hMaxRequestTimes": "600-900","hMaxReusableSecs": "1800-3000","maxConnections": 2}}&security=reality&fp=firefox&sni=git.medrocket.ru&pbk=YHPoUNxsml4z6pYt-7djOb1lqnBjxCk4-2mk84pveyc&sid=3b5b38669a1a51c0#🇷🇺 Россия №48?serverDescription=WW91dHViZSDQsdC10Lcg0YDQtdC60LvQsNC80Ys=
+vless://d67ead25-b5d4-002f-b2fc-839ea07adcec@136.234.9.66:443?flow=&type=xhttp&host=&path=/repository&mode=packet-up&extra={"xmux":{"cMaxReuseTimes": 0,"hKeepAlivePeriod": 0,"hMaxRequestTimes": "600-900","hMaxReusableSecs": "1800-3000","maxConnections": 2}}&security=reality&fp=firefox&sni=git.medrocket.ru&pbk=YHPoUNxsml4z6pYt-7djOb1lqnBjxCk4-2mk84pveyc&sid=3b5b38669a1a51c0#🇸🇪 Швеция №48?serverDescription=VGVsZWdyYW0sIENoYXRHUFQsIEdlbWluaQ==
+vless://d67ead25-b5d4-0037-b2fc-839ea07adcec@136.234.9.66:443?flow=&type=xhttp&host=&path=/repository&mode=packet-up&extra={"xmux":{"cMaxReuseTimes": 0,"hKeepAlivePeriod": 0,"hMaxRequestTimes": "600-900","hMaxReusableSecs": "1800-3000","maxConnections": 2}}&security=reality&fp=firefox&sni=git.medrocket.ru&pbk=YHPoUNxsml4z6pYt-7djOb1lqnBjxCk4-2mk84pveyc&sid=3b5b38669a1a51c0#🇱🇻 Латвия №48?serverDescription=VGVsZWdyYW0sIENoYXRHUFQsIEdlbWluaQ==
+"""
+
 SOURCES = [
     {
         "name": "Theakres",
@@ -67,11 +81,12 @@ SOURCES = [
     {
         "name": "Fixnet",
         "title": "🇮🇷 Иран #1",
-        "url": "https://raw.githubusercontent.com/HalyavusVPNUS/cat-wife-vpn/refs/heads/main/Fixnet",
+        # подписки нет: конфиги лежат в FIXNET_CONFIGS (вверху файла)
+        "configs": FIXNET_CONFIGS,
         "reject_russian_flag": False,
-        # Если с раннера GitHub конфиги не проходят проверку, JSON был бы пустым
-        # и пропускался, поэтому добираем непроверенными (при открытом TCP-порте).
-        # Хочешь только стабильные: поставь False.
+        # Эти конфиги xhttp: sing-box их проверить не может, поэтому они идут
+        # через добор непроверенными (при открытом TCP-порте).
+        # Если поставить False, JSON будет пустым.
         "fill_unverified": True,
         "limit": 10,                # конфигов в JSON
         # берём ТОЛЬКО эти страны (коды ISO): Латвия и Швеция
@@ -251,6 +266,14 @@ def extract_uris(body):
 
 
 def fetch_source(source):
+    # конфиги вставлены прямо в скрипт: подписку не скачиваем
+    inline = source.get("configs")
+
+    if inline:
+        uris = extract_uris(inline)
+        print(f"{source['name']}: {len(uris)} inline configs (no subscription)")
+        return uris
+
     errors = []
 
     for user_agent in USER_AGENTS:
@@ -1042,9 +1065,9 @@ def geo_bucket(uri, geo):
 
 # ------------------------------------------------------ country rules
 
-def uri_countries(uri, geo):
-    """Множество кодов стран конфига: по флагу/названию (часть после #)
-    и по геолокации IP сервера (если она есть в geo)."""
+def name_countries(uri):
+    """Коды стран только по названию конфига (часть после #):
+    флаги-эмодзи и слова из COUNTRY_WORDS."""
     fragment = urllib.parse.unquote(
         html.unescape(urllib.parse.urlsplit(uri).fragment)
     )
@@ -1065,13 +1088,32 @@ def uri_countries(uri, geo):
         if any(word in low for word in words):
             codes.add(code)
 
-    # страна по IP сервера
+    return codes
+
+
+def uri_countries(uri, geo):
+    """Множество кодов стран конфига: по названию (флаг/слова)
+    и по геолокации IP сервера (если она есть в geo)."""
+    codes = name_countries(uri)
+
     host, _ = uri_endpoint(uri)
     info = geo.get(host)
     if info and info[2] and info[2] != "??":
         codes.add(info[2].upper())
 
     return codes
+
+
+def matches_only(uri, geo, only):
+    """Для «только эти страны»: если в названии конфига есть страна, верим названию
+    (несколько конфигов на одном IP могут называться разными странами);
+    если страны в названии нет, смотрим на IP сервера."""
+    by_name = name_countries(uri)
+
+    if by_name:
+        return bool(by_name & set(only))
+
+    return bool(uri_countries(uri, geo) & set(only))
 
 
 def source_has_country_rules(source):
@@ -1089,10 +1131,10 @@ def rules_accept(source, uri, geo, counts):
     excluded = source.get("excluded_countries") or set()
     caps = source.get("country_caps") or {}
 
-    codes = uri_countries(uri, geo)
-
-    if only and not (codes & set(only)):
+    if only and not matches_only(uri, geo, only):
         return False
+
+    codes = uri_countries(uri, geo)
 
     if codes & set(excluded):
         return False
@@ -1275,15 +1317,15 @@ def get_working(source):
         before = len(candidates)
         candidates = [
             item for item in candidates
-            if not (uri_countries(item, {}) & set(excluded))
+            if not (name_countries(item) & set(excluded))
         ]
         print(
             f"{source['name']}: excluded countries {sorted(excluded)} by name, "
             f"kept {len(candidates)} of {before} links"
         )
 
-    # «только эти страны»: определяем страну каждого кандидата (название + IP)
-    # и оставляем только подходящие, ещё до тестирования
+    # «только эти страны»: определяем страну каждого кандидата (название, а если
+    # его нет, то IP) и оставляем только подходящие, ещё до тестирования
     only = source.get("only_countries")
 
     if only:
@@ -1291,7 +1333,7 @@ def get_working(source):
         geo_pre = geolocate({uri_endpoint(item)[0] for item in candidates})
         candidates = [
             item for item in candidates
-            if uri_countries(item, geo_pre) & set(only)
+            if matches_only(item, geo_pre, only)
         ]
         print(
             f"{source['name']}: only countries {sorted(only)}, "
