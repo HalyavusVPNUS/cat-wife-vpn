@@ -55,6 +55,16 @@ SOURCES = [
         # allowed_countries нет: остальные страны берём все
     },
     {
+        "name": "goose",
+        "title": "🇨🇳 Китай #2",
+        "url": "https://raw.githubusercontent.com/HalyavusVPNUS/bubaleti/refs/heads/main/vless.txt",
+        "reject_russian_flag": False,
+        # БЕЗ проверки стабильности: просто первые 5 конфигов из подписки
+        # (по порядку, как они лежат в файле)
+        "first_n": 5,
+        # allowed_countries нет: берём все страны
+    },
+    {
         "name": "Fixnet",
         "title": "🇮🇷 Иран #1",
         "url": "https://raw.githubusercontent.com/HalyavusVPNUS/cat-wife-vpn/refs/heads/main/Fixnet",
